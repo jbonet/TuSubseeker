@@ -51,7 +51,6 @@ def getSuitableRelease(showInfo):
     episode = showInfo.episode
     release = showInfo.release
     if release is not None:
-        print("Iterar..., de momento me salgo e ya")
         url = "http://www.tusubtitulo.com/serie/%s/%s/%s/0" % (
             show.lower(), season, str(int(episode)))
         pageHtml = requests.get(url)
@@ -87,7 +86,7 @@ def downloadSubtitle(showInfo):
         episode = '0' + episode
     url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
         show, season, episode, 0)
-    print(url)
+
     language_codes = {'es': 5, 'en': 1}
     search = "http://www.tusubtitulo.com/updated/5/(?P<code>[0-9]+)/0"
     search_alt = "http://www.tusubtitulo.com/updated/4/(?P<code>[0-9]+)/0"
@@ -117,31 +116,18 @@ def downloadSubtitle(showInfo):
             print("No encontrado :(")
 
     try:
-        c = pycurl.Curl()
-        c.setopt(c.URL,
-                 "http://www.tusubtitulo.com/updated/%s/%s/0" % (lang, code))
-        c.setopt(c.HTTPHEADER, ['Accept-Encoding: gzip, deflate, sdch',
-                                'Accept-Language: es-ES,es;q=0.8',
-                                'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.93 Safari/537.36',
-                                'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                                'Referer: %s' % (url)])
-        f = open('%s-%sx%s.srt' % (show, season, chapter), 'wb')
-        c.setopt(c.WRITEDATA, f)
-        c.perform()
+        url = "http://www.tusubtitulo.com/updated/%s/%s/0" % (lang, code)
+        r = requests.get(url, headers={'referer': 'http://www.tusubtitulo.com'})
+        with open(show + str(season) + 'x' + str(episode) + '.srt', 'wb') as subtitle:
+            subtitle.write(r.content)
         print("Listo :)")
     except:
         print("Probando a descargar el original...")
         try:
-            c = pycurl.Curl()
-            c.setopt(c.URL, "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0")
-            c.setopt(c.HTTPHEADER, ['Accept-Encoding: gzip, deflate, sdch',
-                                    'Accept-Language: es-ES,es;q=0.8',
-                                    'User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.93 Safari/537.36',
-                                    'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                                    'Referer: %s' % (url)])
-            f = open('%s-%sx%s.srt' % (show, season, chapter), 'wb')
-            c.setopt(c.WRITEDATA, f)
-            c.perform()
+            url = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
+            r = requests.get(url, headers={'referer': 'http://www.tusubtitulo.com'})
+            with open(show + str(season) + 'x' + str(episode) + '.srt', 'wb') as subtitle:
+                subtitle.write(r.content)
             print("Listo :)")
         except:
             print("Error del todo")
@@ -184,7 +170,7 @@ def folderSearch(folder):
                         name = "%s %s" % (name, year)
                     # print "Descargaremos subtitulos de: %s Temporada: %s, Capítulo: %s" %
                     # (name, season, episode)
-                    #searchString = "%s %sx%s" % (name, int(season), episode)
+                    # searchString = "%s %sx%s" % (name, int(season), episode)
                     # print searchString
                     showInfo = ShowInfo.ShowInfo(name, int(season), episode, release)
                     downloadSubtitle(showInfo)
