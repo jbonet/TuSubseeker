@@ -1,0 +1,26 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+<link href="http://www.tusubtitulo.com/css/subtitulos.css" rel="stylesheet" type="text/css"/>
+<HTML><HEAD>
+<TITLE>P&aacute;gina no encontrada.</TITLE>
+</HEAD><BODY>
+
+<br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+
+<p><center><img src="http://www.tusubtitulo.com/images/encontrado.png" alt="TuSubtitulo"</p></center>
+
+<p><h1>Lo sentimos. La p&aacute;gina que intenta visitar no existe.</p></h1>
+
+<p><h1>Regresa a nuestro portal: <a href="http://www.tusubtitulo.com/">http://www.tusubtitulo.com/</p></h1></a>
+
+
+
+<!--#echo var="HTTP_HOST" -->
+
+
+<!-- 
+                                                                                                                                                                                                                                                                                                                                             
+--> 
+
+<!-- 
+     
+--> 
