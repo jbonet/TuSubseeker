@@ -1,3 +1,5 @@
 *.srt
 *.mkv
-Tests
+*.pyc
+Tests/
+
