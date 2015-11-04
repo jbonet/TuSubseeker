@@ -44,7 +44,14 @@ release_equivalence_table = {
 
 lang_codes = {
     '1': 'en',
-    '5': 'es'
+    '5': 'es',
+    '6': 'es-la'
+}
+
+lang_codes_rev = {
+    'en': '1',
+    'es': '5',
+    'es-la': '6'
 }
 
 showCodesDict = {}
@@ -96,8 +103,7 @@ def downloadSubtitle(showInfo, lang="5"):
 
     language_codes = {'es': 5, 'en': 1}
     search = "http://www.tusubtitulo.com/updated/5/(?P<code>[0-9]+)/0"
-    search_alt = "http://www.tusubtitulo.com/updated/4/(?P<code>[0-9]+)/0"
-    lang = ""
+    search_alt = "http://www.tusubtitulo.com/updated/6/(?P<code>[0-9]+)/0"
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
@@ -123,17 +129,22 @@ def downloadSubtitle(showInfo, lang="5"):
         #     print("No encontrado :(")
 
     try:
-        url = "http://www.tusubtitulo.com/updated/%s/%s/0" % (lang, code)
+        url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (lang, code, str(release_code))
         r = requests.get(url, headers={'referer': 'http://www.tusubtitulo.com'})
-        with open(show + str(season) + 'x' + str(episode) + '.srt', 'wb') as subtitle:
+        print(r.status_code)
+        with open(show + str(season) + 'x' + str(episode) + "." + lang_codes[lang] + '.srt', 'wb') as subtitle:
             subtitle.write(r.content)
         print("Listo :)")
     except:
         print("Probando a descargar el original...")
         try:
-            url = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
+            url = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/%s" % (release_code)
             r = requests.get(url, headers={'referer': 'http://www.tusubtitulo.com'})
-            with open(show + str(season) + 'x' + str(episode) + lang_codes[lang] + '.srt', 'wb') as subtitle:
+            print(r.status_code)
+            if r.status_code == 404 and lang == "5":
+                # retry with lang 6
+                downloadSubtitle(showInfo, "6")
+            with open(show + str(season) + 'x' + str(episode) + "." + lang_codes[lang] + '.srt', 'wb') as subtitle:
                 subtitle.write(r.content)
             print("Listo :)")
         except:
@@ -183,19 +194,27 @@ def folderSearch(folder):
                     for lang in langsToLook:
                         downloadSubtitle(showInfo, lang)
 
+
+def selectLanguages(langs):
+    if not isinstance(langs, list):
+        langsToLook.append(lang_codes_rev[langs])
+    else:
+        for language in langs:
+            langsToLook.append(lang_codes_rev[language])
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', help='TV Show', metavar="Title", default=None)
     parser.add_argument('-s', help='Season', metavar="Season", default=None)
-    parser.add_argument('-c', help='Chapter', metavar="Chapter", default=None)
+    parser.add_argument('-e', help='Episode', metavar="Episode", default=None)
     parser.add_argument('-r', help='Release', metavar="Release", default=None)
     parser.add_argument('-f', help='Folder', metavar="Folder", default='.')
-    parser.add_argument('-l', help='Language', metavar="Language", default=["1", "5"])
+    parser.add_argument('-l', help='Language', metavar="Language", default=["es", "en"])
     args = parser.parse_args()
 
     isItFolderSearch = True
-    if args.s is None and args.t is None and args.c is None:
+    if args.s is None and args.t is None and args.e is None:
         print("Busqueda en carpeta")
         isItFolderSearch = True
     else:
@@ -206,12 +225,11 @@ if __name__ == "__main__":
         for arg, value in argStatus:
             if value is None and arg is not 'r':
                 print ("ERROR: Faltan argumentos.")
-                print("usage: testaaa.py [-t 'Title' -s Season -c Chapter] [-r Release]")
+                print("usage: testaaa.py [-t 'Title' -s Season -e Episode] [-r Release]")
                 sys.exit(-1)
         isItFolderSearch = False
 
-    for languages in args.l:
-        langsToLook.append(languages)
+    selectLanguages(args.l)
 
     with open('dict.txt', 'r') as inf:
         showCodesDict = eval(inf.read())
@@ -219,5 +237,5 @@ if __name__ == "__main__":
     if isItFolderSearch:
         folderSearch(args.f)
     else:
-        showInfo = ShowInfo.ShowInfo(args.t, args.s, args.c, args.r)
+        showInfo = ShowInfo.ShowInfo(args.t, args.s, args.e, args.r)
         downloadSubtitle(showInfo)
