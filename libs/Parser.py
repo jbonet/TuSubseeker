@@ -66,6 +66,7 @@ def cleanName(name):
         name = rx.sub('', name)
 
     # Take out audio specs, after suffixing with space to simplify rx.
+
     name = name + ' '
     for s in audio:
         rx = re.compile(s, re.IGNORECASE)

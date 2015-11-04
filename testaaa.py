@@ -12,6 +12,7 @@ import requests
 import os
 import sys
 from libs import Parser
+from libs import ShowInfo
 
 standalone_episode_regexs = [
     # Newzbin style, no _UNPACK_
@@ -33,35 +34,59 @@ episode_regexps = [
     '(.*?)[^0-9a-z](?P<season>[0-9]{1,2})(?P<ep>[0-9]{2})([\.\-][0-9]+(?P<secondEp>[0-9]{2})([ \-_\.]|$)[\.\-]?)?([^0-9a-z%]|$)'
 ]
 
-equivalences = {
+release_equivalence_table = {
     'LOL': 'DIMENSION',
     'SYS': 'DIMENSION',
-    'XII': 'IMMERSE'
+    'XII': 'IMMERSE',
+    'PROPER': 'LOL,DIMENSION',
+    'DIMENSION': 'LOL'
 }
 
 showCodesDict = {}
 
 
-def downloadSubtitle(show, season, episode, release):
-
+def getSuitableRelease(showInfo):
+    show = showInfo.title
+    season = showInfo.season
+    episode = showInfo.episode
+    release = showInfo.release
     if release is not None:
         print("Iterar..., de momento me salgo e ya")
         url = "http://www.tusubtitulo.com/serie/%s/%s/%s/0" % (
             show.lower(), season, str(int(episode)))
         pageHtml = requests.get(url)
         tree = html.fromstring(pageHtml.text)
+        iterations = 0
         for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
-            ve = version.lstrip()
+            ve = version.lstrip().encode("utf-8")
             if ve:
-                print("Este subtitulo contiene: " + ve.split(' ')[1])
-                if equivalences[ve.split(' ')[1]] == release or release == ve.split(' ')[1]:
-                    print("OK")
-        sys.exit(0)
+                fetchedRls = ve.split(' ')[1]
+                print(fetchedRls)
+                try:
+                    if release == fetchedRls:
+                        print("OK")
+                    elif release in release_equivalence_table[fetchedRls]:
+                        print("OK")
+                    return iterations
+                except KeyError:
+                    # Encode not known
+                    pass
+            iterations += 1
+        print("No se encontró ninguna versión que se corresponda con su archivo.\nDescargaremos la versión genérica.")
+        return 0
 
-    if len(chapter) == 1:
-        chapter = '0' + chapter
+
+def downloadSubtitle(showInfo):
+    show = showInfo.title
+    season = showInfo.season
+    episode = showInfo.episode
+    release = showInfo.release
+    release_code = getSuitableRelease(showInfo)
+
+    if len(episode) == 1:
+        episode = '0' + episode
     url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
-        show, season, chapter, showCodesDict[show])
+        show, season, episode, 0)
     print(url)
     language_codes = {'es': 5, 'en': 1}
     search = "http://www.tusubtitulo.com/updated/5/(?P<code>[0-9]+)/0"
@@ -144,7 +169,6 @@ def folderSearch(folder):
             for rx in episode_regexps[0:-1]:
                 match = re.search(rx, mkvfile, re.IGNORECASE)
                 if match:
-                    print(match)
                     show = match.group('show')
                     release = mkvfile[mkvfile.rfind('-') + 1:]
                     if release.rfind('[') > -1:
@@ -162,7 +186,8 @@ def folderSearch(folder):
                     # (name, season, episode)
                     #searchString = "%s %sx%s" % (name, int(season), episode)
                     # print searchString
-                    downloadSubtitle(name, int(season), episode, release)
+                    showInfo = ShowInfo.ShowInfo(name, int(season), episode, release)
+                    downloadSubtitle(showInfo)
 
 if __name__ == "__main__":
 
@@ -196,4 +221,5 @@ if __name__ == "__main__":
     if isItFolderSearch:
         folderSearch(args.f)
     else:
-        downloadSubtitle(args.t, args.s, args.c, args.r)
+        showInfo = ShowInfo.ShowInfo(args.t, args.s, args.c, args.r)
+        downloadSubtitle(showInfo)

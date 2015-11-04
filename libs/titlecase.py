@@ -22,8 +22,8 @@ SMALL_FIRST = re.compile(r'^(%s*)(%s)\b' % (PUNCT, SMALL), re.I)
 SMALL_LAST = re.compile(r'\b(%s)%s?$' % (SMALL, PUNCT), re.I)
 SUBPHRASE = re.compile(r'([:.;?!][ ])(%s)' % SMALL)
 
-def titlecase(text):
 
+def titlecase(text):
     """
     Titlecases input text
 
@@ -36,6 +36,7 @@ def titlecase(text):
     """
 
     words = re.split('\s', text)
+
     line = []
     for word in words:
         if INLINE_PERIOD.search(word) or UC_ELSEWHERE.match(word):
@@ -60,4 +61,14 @@ def titlecase(text):
         m.group(2).capitalize()
     ), line)
 
+    line = checkForMr(line)
+
     return line
+
+
+def checkForMr(line):
+    line2 = line
+    if 'Mr ' in line:
+        line2 = "%s.%s" % (line[:line.find(' ')], line[line.find(' '):])
+        print line2
+    return line2
