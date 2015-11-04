@@ -5,8 +5,8 @@ from __future__ import print_function
 from lxml import html
 import lxml
 import argparse
-import pycurl
-import urllib2
+# import pycurl
+# import urllib2
 import re
 import requests
 import os
@@ -42,7 +42,14 @@ release_equivalence_table = {
     'DIMENSION': 'LOL'
 }
 
+lang_codes = {
+    '1': 'en',
+    '5': 'es'
+}
+
 showCodesDict = {}
+
+langsToLook = []
 
 
 def getSuitableRelease(showInfo):
@@ -75,7 +82,7 @@ def getSuitableRelease(showInfo):
         return 0
 
 
-def downloadSubtitle(showInfo):
+def downloadSubtitle(showInfo, lang="5"):
     show = showInfo.title
     season = showInfo.season
     episode = showInfo.episode
@@ -102,18 +109,18 @@ def downloadSubtitle(showInfo):
         'Host': 'www.tusubtitulo.com'
     }
 
-    page_content_req = urllib2.Request(url, headers=headers)
-    page_content = urllib2.urlopen(page_content_req).read()
+    page_content_req = requests.get(url, headers=headers)  # urllib2.Request(url, headers=headers)
+    page_content = page_content_req.text
 
     try:
         code = re.search(search, page_content).group(1)
-        lang = "5"
     except:
-        try:
-            code = re.search(search_alt, page_content).group(1)
-            lang = "4"
-        except:
-            print("No encontrado :(")
+        print("Si llego aqui es error.")
+        # try:
+        #     code = re.search(search_alt, page_content).group(1)
+        #     lang = "4"
+        # except:
+        #     print("No encontrado :(")
 
     try:
         url = "http://www.tusubtitulo.com/updated/%s/%s/0" % (lang, code)
@@ -126,7 +133,7 @@ def downloadSubtitle(showInfo):
         try:
             url = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
             r = requests.get(url, headers={'referer': 'http://www.tusubtitulo.com'})
-            with open(show + str(season) + 'x' + str(episode) + '.srt', 'wb') as subtitle:
+            with open(show + str(season) + 'x' + str(episode) + lang_codes[lang] + '.srt', 'wb') as subtitle:
                 subtitle.write(r.content)
             print("Listo :)")
         except:
@@ -173,7 +180,8 @@ def folderSearch(folder):
                     # searchString = "%s %sx%s" % (name, int(season), episode)
                     # print searchString
                     showInfo = ShowInfo.ShowInfo(name, int(season), episode, release)
-                    downloadSubtitle(showInfo)
+                    for lang in langsToLook:
+                        downloadSubtitle(showInfo, lang)
 
 if __name__ == "__main__":
 
@@ -182,7 +190,8 @@ if __name__ == "__main__":
     parser.add_argument('-s', help='Season', metavar="Season", default=None)
     parser.add_argument('-c', help='Chapter', metavar="Chapter", default=None)
     parser.add_argument('-r', help='Release', metavar="Release", default=None)
-    parser.add_argument('-f', help='Release', metavar="Release", default='.')
+    parser.add_argument('-f', help='Folder', metavar="Folder", default='.')
+    parser.add_argument('-l', help='Language', metavar="Language", default=["1", "5"])
     args = parser.parse_args()
 
     isItFolderSearch = True
@@ -200,6 +209,9 @@ if __name__ == "__main__":
                 print("usage: testaaa.py [-t 'Title' -s Season -c Chapter] [-r Release]")
                 sys.exit(-1)
         isItFolderSearch = False
+
+    for languages in args.l:
+        langsToLook.append(languages)
 
     with open('dict.txt', 'r') as inf:
         showCodesDict = eval(inf.read())
