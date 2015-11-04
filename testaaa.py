@@ -11,7 +11,7 @@ import re
 import requests
 import os
 import sys
-from libs import VideoFiles
+from libs import Parser
 
 standalone_episode_regexs = [
     # Newzbin style, no _UNPACK_
@@ -46,8 +46,8 @@ def downloadSubtitle(show, season, episode, release):
 
     if release is not None:
         print("Iterar..., de momento me salgo e ya")
-        url = "http://www.tusubtitulo.com/serie/%s/%s/%s/%s" % (
-            show.lower(), season, str(int(episode)), showCodesDict[show])
+        url = "http://www.tusubtitulo.com/serie/%s/%s/%s/0" % (
+            show.lower(), season, str(int(episode)))
         pageHtml = requests.get(url)
         tree = html.fromstring(pageHtml.text)
         for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
@@ -155,7 +155,7 @@ def folderSearch(folder):
                     season = match.group('season')
                     episode = match.group('ep')
                     # Clean title.
-                    name, year = VideoFiles.CleanName(show)
+                    name, year = Parser.cleanName(show)
                     if year is not None:
                         name = "%s %s" % (name, year)
                     # print "Descargaremos subtitulos de: %s Temporada: %s, Capítulo: %s" %
