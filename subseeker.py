@@ -5,6 +5,7 @@ from __future__ import print_function
 from lxml import html
 import lxml
 import argparse
+import codecs
 # import pycurl
 # import urllib2
 import re
@@ -94,7 +95,16 @@ def getSuitableRelease(showInfo):
         return 0
 
 
-def downloadSubtitle(showInfo, lang="1"):
+def writeSubtitleToFile(showInfo, lang, text):
+    show = showInfo.title
+    season = showInfo.season
+    episode = showInfo.episode
+    release = showInfo.release
+    with open(show + str(season) + 'x' + str(episode) + "." + lang_codes[lang] + '.srt', 'wb') as subtitle:
+        subtitle.write(text)
+
+
+def downloadSubtitle(showInfo):
     show = showInfo.title
     season = showInfo.season
     episode = showInfo.episode
@@ -106,51 +116,54 @@ def downloadSubtitle(showInfo, lang="1"):
     url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
         show, season, episode, 0)
 
-    language_codes = {'es': 5, 'en': 1}
-    search = "http://www.tusubtitulo.com/updated/5/(?P<code>[0-9]+)/0"
-    search_alt = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
+    # print(langsToLook)
 
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-        'Accept-Encoding': 'none',
-        'Accept-Language': 'es-ES,es;q=0.8',
-        'Connection': 'keep-alive',
-        'Host': 'www.tusubtitulo.com'
-    }
+    for lang in langsToLook:
+        print("looking for language: " + lang_codes[lang])
+        search = "http://www.tusubtitulo.com/updated/%s/(?P<code>[0-9]+)/0" % (str(lang))
+        search_alt = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
 
-    page_content_req = requests.get(url, headers=headers)  # urllib2.Request(url, headers=headers)
-    page_content = page_content_req.text
-    orig_or_updated = 0
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+            'Accept-Encoding': 'none',
+            'Accept-Language': 'es-ES,es;q=0.8',
+            'Connection': 'keep-alive',
+            'Host': 'www.tusubtitulo.com'
+        }
 
-    try:
-        code = re.search(search, page_content).group(1)
-        orig_or_updated = "updated"
-    except:
-        code = re.search(search_alt, page_content).group(1)
-        orig_or_updated == "original"
+        # urllib2.Request(url, headers=headers)
+        page_content_req = requests.get(url, headers=headers)
+        page_content = page_content_req.text
+        orig_or_updated = 0
 
-    try:
-        print("Language: " + lang)
-        print("Sub code: " + code)
-        if orig_or_updated == "updated":
-            url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (lang, code, str(release_code))
+        try:
+            code = re.search(search, page_content).group(1)
+            orig_or_updated = "updated"
+        except:
+            try:
+                code = re.search(search_alt, page_content).group(1)
+                orig_or_updated = "original"
+            except:
+                print("Language not found.")
+
+        try:
+            print("Language: " + str(lang))
+            print("Sub code: " + code)
+            url = None
+            if orig_or_updated == "updated":
+                url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (
+                    lang, code, str(release_code))
+            elif orig_or_updated == "original":
+                print("Probando a descargar el original...")
+                url = "http://www.tusubtitulo.com/original/%s/%s" % (code, release_code)
             r = requests.get(url, headers={'referer': 'http://www.tusubtitulo.com'})
-            print(r.status_code)
-            with open(show + str(season) + 'x' + str(episode) + "." + lang_codes[lang] + '.srt', 'wb') as subtitle:
-                subtitle.write(r.content)
+            # print(r.status_code)
+            writeSubtitleToFile(showInfo, lang, r.content)
             print("Listo :)")
-        else:
-            print("Probando a descargar el original...")
-            url = "http://www.tusubtitulo.com/original/%s/%s" % (code, release_code)
-            r = requests.get(url, headers={'referer': 'http://www.tusubtitulo.com'})
-            print(r.status_code)
-            with open(show + str(season) + 'x' + str(episode) + "." + lang_codes[lang] + '.srt', 'wb') as subtitle:
-                subtitle.write(r.content)
-            print("Listo :)")
-    except:
-        print("Error del todo")
+        except Exception as e:
+            print("Error fatal: " + str(e))
 
 
 def folderSearch(folder):
@@ -212,7 +225,7 @@ if __name__ == "__main__":
     parser.add_argument('-e', help='Episode', metavar="Episode", default=None)
     parser.add_argument('-r', help='Release', metavar="Release", default=None)
     parser.add_argument('-f', help='Folder', metavar="Folder", default='.')
-    parser.add_argument('-l', help='Language', metavar="Language", default=["en"])
+    parser.add_argument('-l', help='Language', metavar="Language", default=["en"])  # , "es"])
     args = parser.parse_args()
 
     isItFolderSearch = True
