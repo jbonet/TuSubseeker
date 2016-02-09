@@ -17,6 +17,7 @@ python tusubtitulo.py -t "Show title" -s Season -e Episode [-r "Release"] [-l la
 ```
 
 Notes:
+- Show title **MUST** match the title used in www.tusubtitlo.com
 - Quotation marks are **NOT** optional.
 - Default folder is current working directory.
 - Languages must be an ISO 3166 two-letter country code.
