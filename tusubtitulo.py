@@ -100,7 +100,8 @@ def writeSubtitleToFile(showInfo, lang, text, folderSearch):
     release = showInfo.release if showInfo.release is not None else "Default"
 
     if not folderSearch:
-        filename = "{} - {}x{}-{}.{}.srt".format(
+        release = "" if release in "Default" else "-" + release
+        filename = "{} - {}x{}{}.{}.srt".format(
             show, str(season), str(episode), release, lang_codes[lang])
     else:
         filename = "{}.{}.srt".format(folderSearch, lang_codes[lang])
@@ -136,7 +137,9 @@ def getEpisodeCode(showInfo):
         code = re.search(search, page_content).group(1)
     except:
         errorPrint("Subtitle code not found")
-
+    debugPrint("Codigo: " + code)
+    if code is None:
+        sys.exit(-1)
     return code
 
 
@@ -151,27 +154,22 @@ def downloadSubtitle(showInfo, folderSearch=False):
 
     for lang in langsToLook:
         debugPrint("Looking for language: " + lang_codes[lang])
-
         try:
-            if code is not None:
-                url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (
-                    lang, code, str(release_code))
-                debugPrint("Codigo: " + code)
-                debugPrint("URL: " + url)
-                infoPrint("Subtitle for language: {} found! Downloading..."
-                          .format(lang_codes[lang]))
+            url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (
+                lang, code, str(release_code))
 
-                r = requests.get(url, headers={'referer':
-                                               'http://www.tusubtitulo.com'})
-                debugPrint("Request code: {}".format(str(r.status_code)))
-                if r.status_code > 300:
-                    errorPrint("Request returned code: " + r.status_code +
-                               " Bad url?")
-                else:
-                    writeSubtitleToFile(showInfo, lang,
-                                        r.content, folderSearch)
+            debugPrint("URL: " + url)
+            infoPrint("Subtitle for language: {} found! Downloading..."
+                      .format(lang_codes[lang]))
+
+            r = requests.get(url, headers={'referer':
+                                           'http://www.tusubtitulo.com'})
+            debugPrint("Request code: {}".format(str(r.status_code)))
+            if r.status_code > 300:
+                errorPrint("Request returned code: {}. Bad url?"
+                           .format(r.status_code))
             else:
-                errorPrint("Code not working!" + str(code))
+                writeSubtitleToFile(showInfo, lang, r.content, folderSearch)
         except Exception as e:
             errorPrint("Error fatal: " + str(e))
 
