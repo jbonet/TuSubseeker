@@ -9,10 +9,12 @@ Folder search:
 ```bash
 python subseeker [-f folder] (if not specified, default folder is current working directory)
 ```
-Not folder search: 
+Not folder search:
 ```bash
 python subseeker.py -t "Título de la serie" -s Season -e Episode [-r "Release"] [-l "language_code"]
 ```
+
+It is possible to pass more than 1 language, as a list of ISO 3166 two-letter codes.
 Nota: las comillas **NO** son opcionales.
 
 Dependencies
