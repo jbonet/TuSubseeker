@@ -1,25 +1,20 @@
-Subtitulos.py
+Subseeker.py
 =======
 
-Descarga subtítulos en Español e Inglés para tus series favoritas de tusubtitulo.com directamente desde la terminal.
+Descarga subtítulos en Español e Inglés para tus series favoritas de www.tusubtitulo.com directamente desde la terminal.
 
 Uso
 =====
-
+Folder search:
 ```bash
-subtitulos -s "Nombre de la serie" -t Temporada -c Capitulo [-r "Release"]
+python subseeker [-f folder] (if not specified, default folder is current working directory)
+```
+Not folder search: 
+```bash
+python subseeker.py -t "Título de la serie" -s Season -e Episode [-r "Release"] [-l "language_code"]
 ```
 Nota: las comillas **NO** son opcionales.
 
-Dependencias
+Dependencies
 ============
-PyCurl
-
-Instalación
-============
-
-```bash
-sudo curl https://raw.github.com/aarondiazr/Subtitulos.py/master/subtitulos -o /usr/local/bin/subtitulos;
-sudo chmod +x /usr/local/bin/subtitulos
-```
-¿Fácil, no?
+LibXml

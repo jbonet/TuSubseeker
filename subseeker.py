@@ -3,7 +3,7 @@
 
 from __future__ import print_function
 from lxml import html
-import lxml
+#import lxml
 import argparse
 import codecs
 # import pycurl
@@ -55,7 +55,6 @@ lang_codes_rev = {
     'es-la': '6'
 }
 
-showCodesDict = {}
 
 langsToLook = []
 
@@ -65,61 +64,64 @@ def getSuitableRelease(showInfo):
     season = showInfo.season
     episode = showInfo.episode
     release = showInfo.release
-    if release is not None:
-        try:
-            url = "http://www.tusubtitulo.com/serie/%s/%s/%s/0" % (
-                show.lower(), season, str(int(episode)))
-            pageHtml = requests.get(url)
-            tree = html.fromstring(pageHtml.text)
-        except:
-            print("No existe la serie.")
-        iterations = 0
-        releases = []
-        for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
-            ve = version.lstrip().encode("utf-8")
-            if ve:
-                fetchedRls = ve.split(' ')[1]
-                releases.append(fetchedRls)
-                try:
-                    if release == fetchedRls:
-                        print("OK")
-                    elif release in release_equivalence_table[fetchedRls]:
-                        print("OK")
+    # if release is not None:
+    try:
+        url = "http://www.tusubtitulo.com/serie/%s/%s/%s/0" % (
+            show.lower(), season, str(int(episode)))
+        pageHtml = requests.get(url)
+        tree = html.fromstring(pageHtml.text)
+    except:
+        print("No existe la serie.")
+    iterations = 0
+    releases = []
+    for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
+        ve = version.lstrip().encode("utf-8")
+        if ve:
+            fetchedRls = ve.split(' ')[1]
+            releases.append(fetchedRls)
+            try:
+                if release in fetchedRls or release in release_equivalence_table[fetchedRls]:
+                    # print("Found suitable encoder.")
                     return iterations
-                except KeyError:
-                    # Encode not known
-                    pass
-            iterations += 1
-        print("No se encontró ninguna versión que se corresponda con su archivo.\n\
-              Descargaremos la versión " + releases[0])
-        return 0
+            except KeyError:
+                # Encode not known
+                pass
+        iterations += 1
+    print(
+        "No se encontró ninguna versión que se corresponda con su archivo.\n \
+         Descargaremos la versión " + releases[0])
+    return 0
 
 
-def writeSubtitleToFile(showInfo, lang, text):
+def writeSubtitleToFile(showInfo, lang, text, folderSearch):
     show = showInfo.title
     season = showInfo.season
     episode = showInfo.episode
-    release = showInfo.release
-    with open(show + str(season) + 'x' + str(episode) + "." + lang_codes[lang] + '.srt', 'wb') as subtitle:
+    release = showInfo.release if showInfo.release is not None else ""
+
+    filename = show + ' - ' + str(season) + 'x' + str(episode) + '-' + release + "." + \
+        lang_codes[lang] + '.srt' if folderSearch is False else folderSearch + \
+        '.' + lang_codes[lang] + '.srt'
+
+    with open(filename, 'wb') as subtitle:
         subtitle.write(text)
+    print("Saved as: " + filename)
 
 
-def downloadSubtitle(showInfo):
+def downloadSubtitle(showInfo, folderSearch=False):
     show = showInfo.title
     season = showInfo.season
     episode = showInfo.episode
     release = showInfo.release
     release_code = getSuitableRelease(showInfo) if release is not None else 0
 
-    if len(episode) == 1:
-        episode = '0' + episode
     url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
         show, season, episode, 0)
 
     # print(langsToLook)
 
     for lang in langsToLook:
-        print("looking for language: " + lang_codes[lang])
+        print("Looking for language: " + lang_codes[lang])
         search = "http://www.tusubtitulo.com/updated/%s/(?P<code>[0-9]+)/0" % (str(lang))
         search_alt = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
 
@@ -136,7 +138,7 @@ def downloadSubtitle(showInfo):
         # urllib2.Request(url, headers=headers)
         page_content_req = requests.get(url, headers=headers)
         page_content = page_content_req.text
-        orig_or_updated = 0
+        #orig_or_updated = 0
 
         try:
             code = re.search(search, page_content).group(1)
@@ -149,19 +151,21 @@ def downloadSubtitle(showInfo):
                 print("Language not found.")
 
         try:
-            print("Language: " + str(lang))
-            print("Sub code: " + code)
+            #print("Language: " + str(lang))
+            #print("Sub code: " + code)
             url = None
             if orig_or_updated == "updated":
                 url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (
                     lang, code, str(release_code))
             elif orig_or_updated == "original":
-                print("Probando a descargar el original...")
+                #print("Probando a descargar el original...")
                 url = "http://www.tusubtitulo.com/original/%s/%s" % (code, release_code)
+            print("Downloading subtitle...")
+            print(url)
             r = requests.get(url, headers={'referer': 'http://www.tusubtitulo.com'})
+            print("Download OK, saving into a file...")
             # print(r.status_code)
-            writeSubtitleToFile(showInfo, lang, r.content)
-            print("Listo :)")
+            writeSubtitleToFile(showInfo, lang, r.content, folderSearch)
         except Exception as e:
             print("Error fatal: " + str(e))
 
@@ -172,6 +176,7 @@ def folderSearch(folder):
     remove = ""
     fileset = set()
     already_downloaded = set()
+    languages = ["en", "es"]
 
     for file in os.listdir(folder):
         if file.endswith(".mkv"):
@@ -181,7 +186,13 @@ def folderSearch(folder):
         if file.endswith(".srt"):
             filename = str(file)
             remove = os.path.splitext(os.path.basename((folder + filename)))[1]
-            already_downloaded.add(filename[:-len(remove)])
+            filename = filename[:-len(remove)]
+
+            for item in languages:
+                if filename.endswith('.' + item):
+                    remove = 3
+                    filename = filename[:-remove]
+                    already_downloaded.add(filename)
 
     for mkvfile in fileset:
         if mkvfile not in already_downloaded:
@@ -206,8 +217,8 @@ def folderSearch(folder):
                     # searchString = "%s %sx%s" % (name, int(season), episode)
                     # print searchString
                     showInfo = ShowInfo.ShowInfo(name, int(season), episode, release)
-                    for lang in langsToLook:
-                        downloadSubtitle(showInfo, lang)
+                    downloadSubtitle(showInfo, mkvfile)
+    #print("Tarea finalizada.")
 
 
 def selectLanguages(langs):
@@ -246,11 +257,11 @@ if __name__ == "__main__":
 
     selectLanguages(args.l)
 
-    with open('dict.txt', 'r') as inf:
-        showCodesDict = eval(inf.read())
-
     if isItFolderSearch:
         folderSearch(args.f)
     else:
-        showInfo = ShowInfo.ShowInfo(args.t, args.s, args.e, args.r)
+        episode = args.e
+        if len(args.e) == 1:
+            episode = '0' + episode
+        showInfo = ShowInfo.ShowInfo(args.t, args.s, episode, args.r)
         downloadSubtitle(showInfo)
