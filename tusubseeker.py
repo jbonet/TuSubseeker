@@ -4,6 +4,7 @@
 from __future__ import print_function
 from libs import Parser
 from libs import ShowInfo
+from libs import Printer
 from lxml import html
 import argparse
 import codecs
@@ -12,6 +13,7 @@ import re
 import requests
 import sys
 import time
+
 
 standalone_episode_regexs = [
     # Newzbin style, no _UNPACK_
@@ -54,7 +56,6 @@ lang_codes_rev = {
 }
 
 langsToLook = []
-debug = False
 
 
 def getSuitableRelease(showInfo):
@@ -81,13 +82,13 @@ def getSuitableRelease(showInfo):
                 if release in fetchedRls or \
                         release in release_equivalence_table[fetchedRls]:
                     if debug:
-                        infoPrint("Found suitable encoder.")
+                        printer.infoPrint("Found suitable encoder.")
                     return iterations
             except KeyError:
                 # Encode not known
                 pass
         iterations += 1
-    infoPrint(
+    printer.infoPrint(
         "No se encontró ninguna versión que se corresponda con su archivo.\n \
          Descargaremos la versión " + releases[0])
     return 0
@@ -108,7 +109,7 @@ def writeSubtitleToFile(showInfo, lang, text, folderSearch):
 
     with open(filename, 'wb') as subtitle:
         subtitle.write(text)
-    infoPrint("Subtitle saved as file: " + filename)
+    printer.infoPrint("Subtitle saved as file: " + filename)
 
 
 def getEpisodeCode(showInfo):
@@ -136,8 +137,8 @@ def getEpisodeCode(showInfo):
     try:
         code = re.search(search, page_content).group(1)
     except:
-        errorPrint("Subtitle code not found")
-    debugPrint("Codigo: " + code)
+        printer.errorPrint("Subtitle code not found")
+    printer.debugPrint("Codigo: " + code)
     if code is None:
         sys.exit(-1)
     return code
@@ -153,25 +154,25 @@ def downloadSubtitle(showInfo, folderSearch=False):
     code = getEpisodeCode(showInfo)
 
     for lang in langsToLook:
-        debugPrint("Looking for language: " + lang_codes[lang])
+        printer.debugPrint("Looking for language: " + lang_codes[lang])
         try:
             url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (
                 lang, code, str(release_code))
 
-            debugPrint("URL: " + url)
-            infoPrint("Subtitle for language: {} found! Downloading..."
-                      .format(lang_codes[lang]))
+            printer.debugPrint("URL: " + url)
+            printer.infoPrint("Subtitle for language: {} found! Downloading..."
+                              .format(lang_codes[lang]))
 
             r = requests.get(url, headers={'referer':
                                            'http://www.tusubtitulo.com'})
-            debugPrint("Request code: {}".format(str(r.status_code)))
+            printer.debugPrint("Request code: {}".format(str(r.status_code)))
             if r.status_code > 300:
-                errorPrint("Request returned code: {}. Bad url?"
-                           .format(r.status_code))
+                printer.errorPrint("Request returned code: {}. Bad url?"
+                                   .format(r.status_code))
             else:
                 writeSubtitleToFile(showInfo, lang, r.content, folderSearch)
         except Exception as e:
-            errorPrint("Error fatal: " + str(e))
+            printer.errorPrint("Error fatal: " + str(e))
 
 
 def folderSearch(folder):
@@ -229,19 +230,6 @@ def selectLanguages(langs):
             langsToLook.append(lang_codes_rev[language])
 
 
-def debugPrint(string, tipo="DEBUG"):
-    if tipo not in "DEBUG" or debug:
-        print("%s: %-5s ->  %s" % (str(time.strftime("%H:%M:%S")),
-                                   tipo, string))
-
-
-def errorPrint(string):
-    debugPrint(string, "ERROR")
-
-
-def infoPrint(string):
-    debugPrint(string, "INFO")
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -256,9 +244,11 @@ if __name__ == "__main__":
                         help='Enable Debug mode')
     args = parser.parse_args()
 
-    if args.debug:
-        debug = True
+    if len(sys.argv) > 1 and args.f is ".":
+        print("HUEHUE")
 
+    debug = True if args.debug else False
+    printer = Printer.Printer(debug)
     isItFolderSearch = True
     if args.s is None and args.t is None and args.e is None:
         print("Busqueda en carpeta")
