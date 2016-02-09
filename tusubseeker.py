@@ -116,6 +116,8 @@ def writeSubtitleToFile(showInfo, lang, text, folderSearch):
 
 
 def getEpisodeCode(showInfo):
+    """Extracts the unique code from the page's HTML"""
+
     show = showInfo.title
     season = showInfo.season
     episode = showInfo.episode
@@ -251,10 +253,10 @@ if __name__ == "__main__":
                         default=None)
     parser.add_argument('-e', '--episode', metavar="Episode",
                         default=None)
-    parser.add_argument('-r', '--release', help='Encoder of the release', metavar="Release",
-                        default=None)
-    parser.add_argument('-f', '--folder', help='Folder that contains the mkv files', metavar="Folder",
-                        default='.')
+    parser.add_argument('-r', '--release', help='Encoder of the release',
+                        metavar="Release", default=None)
+    parser.add_argument('-f', '--folder', help='Folder that contains ' +
+                        'the mkv files', metavar="Folder", default='.')
     parser.add_argument('-l', '--languages', help='Languages in which the ' +
                         'subtitles are going to be downloaded', nargs='+',
                         metavar="Lang", default=["es"])
@@ -274,7 +276,6 @@ if __name__ == "__main__":
                 parser.error("Argument '--{}' is required for normal search"
                              .format(arg))
                 sys.exit(-1)
-
     else:
         printer.debugPrint("Folder Search mode detected")
         isItFolderSearch = True
