@@ -256,8 +256,10 @@ if __name__ == "__main__":
 
         for arg, value in argStatus:
             if value is None and arg is not 'r':
-                print ("ERROR: Faltan argumentos.")
-                print("usage: testaaa.py [-t 'Title' -s Season -e Episode] [-r Release]")
+                print ("ERROR: Missing arguments.")
+                print("Usage: python " + sys.argv[0] +
+                      " [-t 'Title' -s Season -e Episode] [-r Release]" +
+                      " [-l Langs...]")
                 sys.exit(-1)
         isItFolderSearch = False
 

@@ -21,5 +21,5 @@ Nota: las comillas **NO** son opcionales.
 
 Dependencies
 ============
-Lxml
-Requests
+Lxml (pip install lxml)
+Requests (pip install requests)
