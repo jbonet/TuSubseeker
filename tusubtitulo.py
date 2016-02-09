@@ -2,19 +2,17 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-from lxml import html
-# import lxml
-import argparse
-import codecs
-# import pycurl
-# import urllib2
-import re
-import requests
-import os
-import sys
-import time
 from libs import Parser
 from libs import ShowInfo
+from lxml import html
+import argparse
+import codecs
+import os
+import re
+import requests
+import sys
+import time
+
 
 standalone_episode_regexs = [
     # Newzbin style, no _UNPACK_
