@@ -1,4 +1,4 @@
-tusubtitulo.py
+TuSubseeker
 =======
 
 Descarga subtítulos en Español e Inglés para tus series favoritas de www.tusubtitulo.com directamente desde la terminal.
@@ -7,13 +7,13 @@ Usage
 =====
 Folder search:
 ```bash
-python tusubtitulo.py [-f folder] [-l langs...]
+python tusubseeker.py [-f folder] [-l langs...]
 ```
 
 
 Episode search:
 ```bash
-python tusubtitulo.py -t "Show title" -s Season -e Episode [-r "Release"] [-l langs...]
+python tusubseeker.py -t "Show title" -s Season -e Episode [-r "Release"] [-l langs...]
 ```
 
 Notes:
