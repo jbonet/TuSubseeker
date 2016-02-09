@@ -7,19 +7,21 @@ Uso
 =====
 Folder search:
 ```bash
-python subseeker [-f folder]
+python subseeker [-f folder] [-l langs...]
 ```
-Default folder is current working directory.
 
-Not folder search:
+
+Episode search:
 ```bash
-python subseeker.py -t "Título de la serie" -s Season -e Episode [-r "Release"] [-l langs...]
+python tusubtitulo.py -t "Show title" -s Season -e Episode [-r "Release"] [-l langs...]
 ```
-It is possible to pass more than 1 language, as a list of ISO 3166 two-letter codes.
 
-Nota: las comillas **NO** son opcionales.
+Notes:
+- Quotation marks are **NOT** optional.
+- Default folder is current working directory.
+- Languages must be an ISO 3166 two-letter country code.
 
 Dependencies
 ============
-Lxml (pip install lxml)
-Requests (pip install requests)
+- Lxml (pip install lxml)
+- Requests (pip install requests)
