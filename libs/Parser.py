@@ -54,7 +54,7 @@ def cleanName(name):
 
     # Take out things in brackets. (sub acts weird here, so we have to do it a few times)
     done = False
-    while done == False:
+    while not done:
         (name, count) = re.subn(r'\[[^\]]+\]', '', name, re.IGNORECASE)
         if count == 0:
             done = True
@@ -137,7 +137,7 @@ def cleanName(name):
         elif not good and newTokens[i].lower() == 'dc':
             finalTokens.append("(Director's cut)")
 
-        if good == True:
+        if good is True:
             numGood += 1
         else:
             numBad += 1
@@ -154,8 +154,10 @@ def cleanName(name):
 
     cleanedName = ' '.join(finalTokens)
 
-    # If we failed to decode/encode above, we may still be dealing with a non-ASCII string here,
-    # which will raise if we try to encode it, so let's just handle it and hope for the best!
+    # If we failed to decode/encode above, we may still be dealing with a
+    # non-ASCII string here,
+    # which will raise if we try to encode it, so let's just handle it
+    # and hope for the best!
     #
     try:
         cleanedName = cleanedName.encode('utf-8')

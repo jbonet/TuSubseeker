@@ -4,14 +4,14 @@
 from __future__ import print_function
 from libs import Parser
 from libs import ShowInfo
+from libs import Printer
 from lxml import html
 import argparse
-import codecs
+import downloader
 import os
-import re
-import requests
 import sys
 import time
+
 
 standalone_episode_regexs = [
     # Newzbin style, no _UNPACK_
@@ -53,129 +53,10 @@ lang_codes_rev = {
     'es-la': '6'
 }
 
-langsToLook = []
-debug = False
-
-
-def getSuitableRelease(showInfo):
-    show = showInfo.title
-    season = showInfo.season
-    episode = showInfo.episode
-    release = showInfo.release
-
-    try:
-        url = "http://www.tusubtitulo.com/serie/%s/%s/%s/0" % (
-            show.lower(), season, str(int(episode)))
-        pageHtml = requests.get(url)
-        tree = html.fromstring(pageHtml.text)
-    except:
-        print("No existe la serie.")
-    iterations = 0
-    releases = []
-    for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
-        ve = version.lstrip().encode("utf-8")
-        if ve:
-            fetchedRls = ve.split(' ')[1]
-            releases.append(fetchedRls)
-            try:
-                if release in fetchedRls or \
-                        release in release_equivalence_table[fetchedRls]:
-                    if debug:
-                        infoPrint("Found suitable encoder.")
-                    return iterations
-            except KeyError:
-                # Encode not known
-                pass
-        iterations += 1
-    infoPrint(
-        "No se encontró ninguna versión que se corresponda con su archivo.\n \
-         Descargaremos la versión " + releases[0])
-    return 0
-
-
-def writeSubtitleToFile(showInfo, lang, text, folderSearch):
-    show = showInfo.title
-    season = showInfo.season
-    episode = showInfo.episode
-    release = showInfo.release if showInfo.release is not None else "Default"
-
-    if not folderSearch:
-        release = "" if release in "Default" else "-" + release
-        filename = "{} - {}x{}{}.{}.srt".format(
-            show, str(season), str(episode), release, lang_codes[lang])
-    else:
-        filename = "{}.{}.srt".format(folderSearch, lang_codes[lang])
-
-    with open(filename, 'wb') as subtitle:
-        subtitle.write(text)
-    infoPrint("Subtitle saved as file: " + filename)
-
-
-def getEpisodeCode(showInfo):
-    show = showInfo.title
-    season = showInfo.season
-    episode = showInfo.episode
-    search = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
-    url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
-        show, season, episode, 0)
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.1' +
-        '1  (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.' +
-        '9,image/webp,*/*;q=0.8',
-        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-        'Accept-Encoding': 'none',
-        'Accept-Language': 'es-ES,es;q=0.8',
-        'Connection': 'keep-alive',
-        'Host': 'www.tusubtitulo.com'
-    }
-
-    page_content_req = requests.get(url, headers=headers)
-    page_content = page_content_req.text
-
-    try:
-        code = re.search(search, page_content).group(1)
-    except:
-        errorPrint("Subtitle code not found")
-    debugPrint("Codigo: " + code)
-    if code is None:
-        sys.exit(-1)
-    return code
-
-
-def downloadSubtitle(showInfo, folderSearch=False):
-    show = showInfo.title
-    season = showInfo.season
-    episode = showInfo.episode
-    release = showInfo.release
-    release_code = getSuitableRelease(showInfo) if release is not None else 0
-
-    code = getEpisodeCode(showInfo)
-
-    for lang in langsToLook:
-        debugPrint("Looking for language: " + lang_codes[lang])
-        try:
-            url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (
-                lang, code, str(release_code))
-
-            debugPrint("URL: " + url)
-            infoPrint("Subtitle for language: {} found! Downloading..."
-                      .format(lang_codes[lang]))
-
-            r = requests.get(url, headers={'referer':
-                                           'http://www.tusubtitulo.com'})
-            debugPrint("Request code: {}".format(str(r.status_code)))
-            if r.status_code > 300:
-                errorPrint("Request returned code: {}. Bad url?"
-                           .format(r.status_code))
-            else:
-                writeSubtitleToFile(showInfo, lang, r.content, folderSearch)
-        except Exception as e:
-            errorPrint("Error fatal: " + str(e))
-
 
 def folderSearch(folder):
-    print("Buscando mkv's en: " + folder)
+    printer.warningPrint("Feature not finished. May be (it sure is) buggy.")
+    printer.infoPrint("Buscando mkv's en: " + folder)
     filename = ""
     remove = ""
     fileset = set()
@@ -197,6 +78,10 @@ def folderSearch(folder):
                     remove = 3
                     filename = filename[:-remove]
                     already_downloaded.add(filename)
+
+    if len(fileset) == 0:
+        printer.infoPrint("No files left to process or the " +
+                          "folder does not contain any mkv")
 
     for mkvfile in fileset:
         if mkvfile not in already_downloaded:
@@ -221,69 +106,60 @@ def folderSearch(folder):
                     downloadSubtitle(showInfo, mkvfile)
 
 
-def selectLanguages(langs):
+def langCode(langs):
+    langsToLook = []
     if not isinstance(langs, list):
         langsToLook.append(lang_codes_rev[langs])
     else:
         for language in langs:
             langsToLook.append(lang_codes_rev[language])
-
-
-def debugPrint(string, tipo="DEBUG"):
-    if tipo not in "DEBUG" or debug:
-        print("%s: %-5s ->  %s" % (str(time.strftime("%H:%M:%S")),
-                                   tipo, string))
-
-
-def errorPrint(string):
-    debugPrint(string, "ERROR")
-
-
-def infoPrint(string):
-    debugPrint(string, "INFO")
+    return langsToLook
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', help='TV Show', metavar="Title", default=None)
-    parser.add_argument('-s', help='Season', metavar="Season", default=None)
-    parser.add_argument('-e', help='Episode', metavar="Episode", default=None)
-    parser.add_argument('-r', help='Release', metavar="Release", default=None)
-    parser.add_argument('-f', help='Folder', metavar="Folder", default='.')
-    parser.add_argument('-l', help='Language', nargs='+', metavar="Lang",
-                        default=["es"])
+    parser.add_argument('-t', '--title', metavar="Title",
+                        default=None)
+    parser.add_argument('-s', '--season', metavar="Season",
+                        default=None)
+    parser.add_argument('-e', '--episode', metavar="Episode",
+                        default=None)
+    parser.add_argument('-r', '--release', help='Encoder of the release',
+                        metavar="Release", default=None)
+    parser.add_argument('-f', '--folder', help='Folder that contains ' +
+                        'the mkv files', metavar="Folder", default='.')
+    parser.add_argument('-l', '--languages', help='Languages in which the ' +
+                        'subtitles are going to be downloaded', nargs='+',
+                        metavar="Lang", default=["es"])
     parser.add_argument('-d', '--debug', action='store_true',
-                        help='Enable Debug mode')
+                        help='Enables Debug mode (Verbose)', default=False)
     args = parser.parse_args()
 
-    if args.debug:
-        debug = True
+    printer = Printer.Printer(args.debug)
 
-    isItFolderSearch = True
-    if args.s is None and args.t is None and args.e is None:
-        print("Busqueda en carpeta")
-        isItFolderSearch = True
-    else:
+    if len(sys.argv) > 1 and args.folder is ".":
+        printer.debugPrint("Normal mode detected")
+        printer.debugPrint("Checking all required arguments are present")
+        isItFolderSearch = False
         argStatus = []
         for arg in vars(args):
-            argStatus.append((arg, getattr(args, arg)))
-
-        for arg, value in argStatus:
-            if value is None and arg is not 'r':
-                print ("ERROR: Missing arguments.")
-                print("Usage: python " + sys.argv[0] +
-                      " [-t 'Title' -s Season -e Episode] [-r Release]" +
-                      " [-l Langs...]")
+            if getattr(args, arg) is None and arg is not 'release':
+                parser.error("Argument '--{}' is required for normal search"
+                             .format(arg))
                 sys.exit(-1)
-        isItFolderSearch = False
+    else:
+        printer.debugPrint("Folder Search mode detected")
+        isItFolderSearch = True
 
-    selectLanguages(args.l)
+    printer.debugPrint(args.languages)
+    downloader = downloader.Downloader(langCode(args.languages), printer)
 
     if isItFolderSearch:
-        folderSearch(args.f)
+        folderSearch(args.folder)
     else:
-        episode = args.e
-        if len(args.e) == 1:
+        episode = args.episode
+        if len(args.episode) == 1:
             episode = '0' + episode
-        showInfo = ShowInfo.ShowInfo(args.t, args.s, episode, args.r)
-        downloadSubtitle(showInfo)
+        showInfo = ShowInfo.ShowInfo(args.title, args.season,
+                                     episode, args.release)
+        downloader.download(showInfo)
