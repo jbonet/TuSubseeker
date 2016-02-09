@@ -5,13 +5,10 @@ from __future__ import print_function
 from libs import Parser
 from libs import ShowInfo
 from libs import Printer
-from lxml import html
 import argparse
 import downloader
 import os
 import sys
-import time
-
 
 standalone_episode_regexs = [
     # Newzbin style, no _UNPACK_
