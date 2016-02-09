@@ -68,9 +68,12 @@ def getSuitableRelease(showInfo):
         url = "http://www.tusubtitulo.com/serie/%s/%s/%s/0" % (
             show.lower(), season, str(int(episode)))
         pageHtml = requests.get(url)
+        if pageHtml.status_code > 300:
+            printer.errorPrint("TV Series not found, have you misspelled it?")
+            sys.exit(-1)
         tree = html.fromstring(pageHtml.text)
     except:
-        print("No existe la serie.")
+        pass
     iterations = 0
     releases = []
     for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
@@ -132,15 +135,19 @@ def getEpisodeCode(showInfo):
     }
 
     page_content_req = requests.get(url, headers=headers)
+    if page_content_req.status_code > 300:
+        printer.errorPrint("TV Series not found, have you misspelled it?")
+        sys.exit(-1)
     page_content = page_content_req.text
 
     try:
         code = re.search(search, page_content).group(1)
     except:
         printer.errorPrint("Subtitle code not found")
-    printer.debugPrint("Codigo: " + code)
+
     if code is None:
         sys.exit(-1)
+    printer.debugPrint("Codigo: " + code)
     return code
 
 
@@ -176,7 +183,8 @@ def downloadSubtitle(showInfo, folderSearch=False):
 
 
 def folderSearch(folder):
-    print("Buscando mkv's en: " + folder)
+    printer.warningPrint("Feature not finished. May be (it sure is) buggy.")
+    printer.infoPrint("Buscando mkv's en: " + folder)
     filename = ""
     remove = ""
     fileset = set()
@@ -198,6 +206,10 @@ def folderSearch(folder):
                     remove = 3
                     filename = filename[:-remove]
                     already_downloaded.add(filename)
+
+    if len(fileset) == 0:
+        printer.infoPrint("No files left to process or the " +
+                          "folder does not contain any mkv")
 
     for mkvfile in fileset:
         if mkvfile not in already_downloaded:
