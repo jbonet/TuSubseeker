@@ -233,47 +233,48 @@ def selectLanguages(langs):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', help='TV Show', metavar="Title", default=None)
-    parser.add_argument('-s', help='Season', metavar="Season", default=None)
-    parser.add_argument('-e', help='Episode', metavar="Episode", default=None)
-    parser.add_argument('-r', help='Release', metavar="Release", default=None)
-    parser.add_argument('-f', help='Folder', metavar="Folder", default='.')
-    parser.add_argument('-l', help='Language', nargs='+', metavar="Lang",
-                        default=["es"])
+    parser.add_argument('-t', '--title', metavar="Title",
+                        default=None)
+    parser.add_argument('-s', '--season', metavar="Season",
+                        default=None)
+    parser.add_argument('-e', '--episode', metavar="Episode",
+                        default=None)
+    parser.add_argument('-r', '--release', help='Encoder of the release', metavar="Release",
+                        default=None)
+    parser.add_argument('-f', '--folder', help='Folder that contains the mkv files', metavar="Folder",
+                        default='.')
+    parser.add_argument('-l', '--languages', help='Languages in which the ' +
+                        'subtitles are going to be downloaded', nargs='+',
+                        metavar="Lang", default=["es"])
     parser.add_argument('-d', '--debug', action='store_true',
-                        help='Enable Debug mode')
+                        help='Enables Debug mode (Verbose)', default=False)
     args = parser.parse_args()
 
-    if len(sys.argv) > 1 and args.f is ".":
-        print("HUEHUE")
+    printer = Printer.Printer(args.debug)
 
-    debug = True if args.debug else False
-    printer = Printer.Printer(debug)
-    isItFolderSearch = True
-    if args.s is None and args.t is None and args.e is None:
-        print("Busqueda en carpeta")
-        isItFolderSearch = True
-    else:
+    if len(sys.argv) > 1 and args.folder is ".":
+        printer.debugPrint("Normal mode detected")
+        printer.debugPrint("Checking all required arguments are present")
+        isItFolderSearch = False
         argStatus = []
         for arg in vars(args):
-            argStatus.append((arg, getattr(args, arg)))
-
-        for arg, value in argStatus:
-            if value is None and arg is not 'r':
-                print ("ERROR: Missing arguments.")
-                print("Usage: python " + sys.argv[0] +
-                      " [-t 'Title' -s Season -e Episode] [-r Release]" +
-                      " [-l Langs...]")
+            if getattr(args, arg) is None and arg is not 'release':
+                parser.error("Argument '--{}' is required for normal search"
+                             .format(arg))
                 sys.exit(-1)
-        isItFolderSearch = False
 
-    selectLanguages(args.l)
+    else:
+        printer.debugPrint("Folder Search mode detected")
+        isItFolderSearch = True
+
+    selectLanguages(args.languages)
 
     if isItFolderSearch:
-        folderSearch(args.f)
+        folderSearch(args.folder)
     else:
-        episode = args.e
-        if len(args.e) == 1:
+        episode = args.episode
+        if len(args.episode) == 1:
             episode = '0' + episode
-        showInfo = ShowInfo.ShowInfo(args.t, args.s, episode, args.r)
+        showInfo = ShowInfo.ShowInfo(args.title, args.season,
+                                     episode, args.release)
         downloadSubtitle(showInfo)
