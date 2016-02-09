@@ -3,7 +3,7 @@ tusubtitulo.py
 
 Descarga subtítulos en Español e Inglés para tus series favoritas de www.tusubtitulo.com directamente desde la terminal.
 
-Uso
+Usage
 =====
 Folder search:
 ```bash
