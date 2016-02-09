@@ -2,6 +2,7 @@
 
 from libs import Printer
 from libs import ShowInfo
+from lxml import html
 import re
 import requests
 import sys
@@ -56,7 +57,8 @@ class Downloader:
 
         page_content_req = requests.get(url, headers=headers)
         if page_content_req.status_code > 300:
-            self.printer.errorPrint("TV Series not found, have you misspelled it?")
+            self.printer.errorPrint("TV Series not found, " +
+                                    "have you misspelled it?")
             sys.exit(-1)
         page_content = page_content_req.text
 
@@ -70,6 +72,8 @@ class Downloader:
         return code
 
     def getSuitableRelease(self, showInfo):
+        """Gets the index of the release if specified, else returns 0."""
+
         show = showInfo.title
         season = showInfo.season
         episode = showInfo.episode
@@ -80,18 +84,17 @@ class Downloader:
                 show.lower(), season, str(int(episode)))
             pageHtml = requests.get(url)
             if pageHtml.status_code > 300:
-                self.printer.errorPrint("TV Series not found, have you misspelled it?")
+                self.printer.errorPrint("TV Series not found," +
+                                        " have you misspelled it?")
                 sys.exit(-1)
             tree = html.fromstring(pageHtml.text)
         except:
             pass
         iterations = 0
-        releases = []
         for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
             ve = version.lstrip().encode("utf-8")
             if ve:
                 fetchedRls = ve.split(' ')[1]
-                releases.append(fetchedRls)
                 try:
                     if release in fetchedRls or \
                             release in release_equivalence_table[fetchedRls]:
@@ -102,18 +105,21 @@ class Downloader:
                     # Encode not known
                     pass
             iterations += 1
-        self.printer.infoPrint(
-            "No se encontró ninguna versión que se corresponda con su archivo.\n \
-             Descargaremos la versión " + releases[0])
+        self.printer.infoPrint("No release matches yours, " +
+                               "default will be downloaded.")
         return 0
 
     def download(self, showInfo, folderSearch=False):
+        """Downloads the specified subtitle"""
+
         show = showInfo.title
         season = showInfo.season
         episode = showInfo.episode
         release = showInfo.release
-        release_code = self.getSuitableRelease(showInfo) if release is not None \
-            else 0
+        if release is not None:
+            release_code = self.getSuitableRelease(showInfo)
+        else:
+            release_code = 0
 
         code = self.getEpisodeCode(showInfo)
 
@@ -130,16 +136,19 @@ class Downloader:
 
                 r = requests.get(url, headers={'referer':
                                                'http://www.tusubtitulo.com'})
-                self.printer.debugPrint("Request code: {}".format(str(r.status_code)))
+                self.printer.debugPrint("Request code: {}"
+                                        .format(str(r.status_code)))
                 if r.status_code > 300:
-                    self.printer.errorPrint("Request returned code: {}. Bad url?"
-                                            .format(r.status_code))
+                    self.printer.errorPrint("Request returned code: {}. " +
+                                            "Bad url?".format(r.status_code))
                 else:
                     self.writeToSrt(showInfo, lang, r.content, folderSearch)
             except Exception as e:
                 self.printer.errorPrint("Error fatal: " + str(e))
 
     def writeToSrt(self, showInfo, lang, text, folderSearch):
+        """Writes the text to a SRT file"""
+
         show = showInfo.title
         season = showInfo.season
         episode = showInfo.episode
