@@ -23,5 +23,5 @@ Notes:
 
 Dependencies
 ============
-- Lxml (pip install lxml)
-- Requests (pip install requests)
+- [Lxml](http://www.lxml.de) (pip install lxml)
+- [Requests](http://docs.python-requests.org/en/master) (pip install requests)
