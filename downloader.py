@@ -89,7 +89,7 @@ class Downloader:
                 sys.exit(-1)
             tree = html.fromstring(pageHtml.text)
         except:
-            pass
+            self.printer.errorPrint("Exception thrown on getSuitableRelease()")
         iterations = 0
         for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
             ve = version.lstrip().encode("utf-8")
@@ -98,13 +98,12 @@ class Downloader:
                 try:
                     if release in fetchedRls or \
                             release in release_equivalence_table[fetchedRls]:
-                        if debug:
-                            self.printer.infoPrint("Found suitable encoder.")
+                        self.printer.infoPrint("Found suitable encoder.")
                         return iterations
                 except KeyError:
                     # Encode not known
                     pass
-            iterations += 1
+                iterations += 1
         self.printer.infoPrint("No release matches yours, " +
                                "default will be downloaded.")
         return 0
@@ -124,7 +123,6 @@ class Downloader:
         code = self.getEpisodeCode(showInfo)
 
         for lang in self.languages:
-            print(lang)
             self.printer.debugPrint("Looking for language: " + lang_codes[lang])
             try:
                 url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (
