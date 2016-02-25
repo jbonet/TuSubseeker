@@ -5,13 +5,10 @@ from __future__ import print_function
 from libs import Parser
 from libs import ShowInfo
 from libs import Printer
-from lxml import html
 import argparse
 import downloader
 import os
 import sys
-import time
-
 
 standalone_episode_regexs = [
     # Newzbin style, no _UNPACK_
@@ -133,6 +130,10 @@ if __name__ == "__main__":
                         metavar="Lang", default=["es"])
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Enables Debug mode (Verbose)', default=False)
+    # MODO output: le pasas un directiorio, y guarda el subtitulo con el nombre
+    # del mkv que se encuentre en el directorio
+    parser.add_argument('-o', '--output', help='Folder where will be saved ' +
+                        'the srt files', metavar="Output", default='.')
     args = parser.parse_args()
 
     printer = Printer.Printer(args.debug)
@@ -162,4 +163,6 @@ if __name__ == "__main__":
             episode = '0' + episode
         showInfo = ShowInfo.ShowInfo(args.title, args.season,
                                      episode, args.release)
-        downloader.download(showInfo)
+        subtitles = downloader.download(showInfo)
+        for sub in subtitles:
+            downloader.writeToSrt(sub)

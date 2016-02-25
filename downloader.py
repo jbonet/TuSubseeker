@@ -5,6 +5,7 @@ from libs import ShowInfo
 from lxml import html
 import re
 import requests
+import status_checker
 import sys
 
 release_equivalence_table = {
@@ -27,12 +28,19 @@ lang_codes_rev = {
     'es-la': '6'
 }
 
+lang_to_unicode = {
+    '1': u'English',
+    '5': u'Español (España)',
+    '6': u'Español (Latinoamérica)'
+}
+
 
 class Downloader:
 
     def __init__(self, languages, printer):
         self.languages = languages
         self.printer = printer
+        self.page_html = None
 
     def getEpisodeCode(self, showInfo):
         """Extracts the unique code from the page's HTML"""
@@ -87,9 +95,10 @@ class Downloader:
                 self.printer.errorPrint("TV Series not found," +
                                         " have you misspelled it?")
                 sys.exit(-1)
+            self.page_html = pageHtml.text
             tree = html.fromstring(pageHtml.text)
         except:
-            pass
+            self.printer.errorPrint("Exception thrown on getSuitableRelease()")
         iterations = 0
         for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
             ve = version.lstrip().encode("utf-8")
@@ -98,16 +107,26 @@ class Downloader:
                 try:
                     if release in fetchedRls or \
                             release in release_equivalence_table[fetchedRls]:
-                        if debug:
-                            self.printer.infoPrint("Found suitable encoder.")
+                        self.printer.infoPrint("Found suitable encoder.")
                         return iterations
                 except KeyError:
-                    # Encode not known
-                    pass
-            iterations += 1
+                    pass  # Encode not known
+                iterations += 1
         self.printer.infoPrint("No release matches yours, " +
                                "default will be downloaded.")
         return 0
+
+    def checkIfAvailable(self, lang, info):
+        status = []
+        for translation in info:
+            if not isinstance(translation, int):
+                if translation[0] == lang_to_unicode[lang]:
+                    if u"%" in translation[1]:
+                        status.append(False)
+                        status.append(translation[1][:translation[1].index(u"%")])
+        if not status:
+            status.append(True)
+        return status
 
     def download(self, showInfo, folderSearch=False):
         """Downloads the specified subtitle"""
@@ -120,12 +139,21 @@ class Downloader:
             release_code = self.getSuitableRelease(showInfo)
         else:
             release_code = 0
-
+        info = status_checker.getStatus(release_code, showInfo, self.page_html)
         code = self.getEpisodeCode(showInfo)
 
+        subtitles = []
+
         for lang in self.languages:
-            print(lang)
             self.printer.debugPrint("Looking for language: " + lang_codes[lang])
+
+            status = self.checkIfAvailable(lang, info)
+            if not status[0]:
+                not_completed_yet = "Subtitle is not ready yet. " + \
+                    str(status[1]) + "% translated."
+                self.printer.infoPrint(not_completed_yet)
+                sys.exit(-1)
+
             try:
                 url = "http://www.tusubtitulo.com/updated/%s/%s/%s" % (
                     lang, code, str(release_code))
@@ -142,13 +170,19 @@ class Downloader:
                     self.printer.errorPrint("Request returned code: {}. " +
                                             "Bad url?".format(r.status_code))
                 else:
-                    self.writeToSrt(showInfo, lang, r.content, folderSearch)
+                    subtitles.append((showInfo, lang, r.content, folderSearch))
+                    # self.writeToSrt(showInfo, lang, r.content, folderSearch)
             except Exception as e:
                 self.printer.errorPrint("Error fatal: " + str(e))
 
-    def writeToSrt(self, showInfo, lang, text, folderSearch):
-        """Writes the text to a SRT file"""
+        return subtitles
 
+    def writeToSrt(self, subtitle):
+        """Writes the text to a SRT file"""
+        showInfo = subtitle[0]
+        lang = subtitle[1]
+        text = subtitle[2]
+        folderSearch = subtitle[3]
         show = showInfo.title
         season = showInfo.season
         episode = showInfo.episode
