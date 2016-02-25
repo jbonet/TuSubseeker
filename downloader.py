@@ -110,8 +110,7 @@ class Downloader:
                         self.printer.infoPrint("Found suitable encoder.")
                         return iterations
                 except KeyError:
-                    # Encode not known
-                    pass
+                    pass  # Encode not known
                 iterations += 1
         self.printer.infoPrint("No release matches yours, " +
                                "default will be downloaded.")
