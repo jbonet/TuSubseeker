@@ -3,6 +3,7 @@
 from libs import Printer
 from libs import ShowInfo
 from lxml import html
+import os
 import re
 import requests
 import status_checker
@@ -239,6 +240,8 @@ class Downloader:
         else:
             filename = "{}.{}.srt".format(folderSearch, lang_codes[lang])
 
-        with open(filename, 'wb') as subtitle:
+        if not os.path.exists("downloads"):
+            os.makedirs("downloads")
+        with open("downloads/" + filename, 'wb') as subtitle:
             subtitle.write(text)
         self.printer.infoPrint("Subtitle saved as file: " + filename)
