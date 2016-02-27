@@ -16,6 +16,7 @@ Episode search:
 python tusubseeker.py -t "Show title" -s Season -e Episode [-r "Release"] [-l langs...]
 ```
 
+
 Notes:
 - Show title **MUST** match the title used in www.tusubtitulo.com
 - Quotation marks are **NOT** optional.
