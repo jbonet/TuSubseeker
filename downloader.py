@@ -3,6 +3,7 @@
 from libs import Printer
 from libs import ShowInfo
 from lxml import html
+from lxml import etree
 import os
 import re
 import requests
@@ -44,11 +45,11 @@ class Downloader:
         self.page_html = None
 
     def getAliasFromFile(self, alias):
-        with open("equivalences.cfg") as f:
-            for line in f:
-                title = line.split('¬')
-                if alias.lower() == title[0]:
-                    return title[1].rstrip('\n')
+        tree = etree.parse("alias.xml")
+        for shows in tree.iter("shows"):
+            for show in shows.iter("show"):
+                if show.find("alias").text == alias:
+                    return show.find("title").text
         return None
 
     def doRequest(self, showInfo, checkMode=False):

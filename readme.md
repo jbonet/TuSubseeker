@@ -24,22 +24,16 @@ Notes:
 
 Aliases
 =======
-Now supports aliases. If a shows title is too long, or anything, you can add it
-to **equivalences.cfg** keeping this structure:
+Now supports aliases. If a shows title is too long, or too complex to be written every single time, you can add it as a show inside the main shows in the file
+**alias.xml** keeping this simple xml structure:
 
-- 1 show per line
-- alias**¬**Real show title
-
-Only works with this formatting for now.
-
-So, if you want to search subtitles for "Marvel's Agents of S.H.I.E.L.D." before
-you had to write this exactly, now you can add a line to the equivalences file like this:
 
 ```bash
-shield¬Marvel's Agents of S.H.I.E.L.D.
+<show>
+  <title>Real title</title>
+  <alias>alias</alias>
+</show>
 ```
-
-And now writting just "shield" would do the trick
 
 Dependencies
 ============
