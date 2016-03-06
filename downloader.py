@@ -3,6 +3,8 @@
 from libs import Printer
 from libs import ShowInfo
 from lxml import html
+from lxml import etree
+import os
 import re
 import requests
 import status_checker
@@ -42,15 +44,15 @@ class Downloader:
         self.printer = printer
         self.page_html = None
 
-    def getEpisodeCode(self, showInfo):
-        """Extracts the unique code from the page's HTML"""
+    def getAliasFromFile(self, alias):
+        tree = etree.parse("alias.xml")
+        for shows in tree.iter("shows"):
+            for show in shows.iter("show"):
+                if show.find("alias").text == alias:
+                    return show.find("title").text
+        return None
 
-        show = showInfo.title
-        season = showInfo.season
-        episode = showInfo.episode
-        search = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
-        url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
-            show, season, episode, 0)
+    def doRequest(self, showInfo, checkMode=False):
         headers = {
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.1' +
             '1  (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
@@ -63,11 +65,54 @@ class Downloader:
             'Host': 'www.tusubtitulo.com'
         }
 
-        page_content_req = requests.get(url, headers=headers)
+        season = showInfo.season if not checkMode else str(1)
+        episode = showInfo.episode if not checkMode else str(1)
+
+        url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
+            showInfo.title, season, episode, 0)
+        return requests.get(url, headers=headers)
+
+    def checkIfExists(self, showInfo):
+        page_content_req = self.doRequest(showInfo, checkMode=True)
         if page_content_req.status_code > 300:
-            self.printer.errorPrint("TV Series not found, " +
-                                    "have you misspelled it?")
+            exists = False
+        else:
+            exists = True
+        return exists
+
+    def tryWithAliases(self, showInfo):
+        self.printer.infoPrint("Title not found, checking " +
+                               "aliases for a match")
+        showInfo.title = self.getAliasFromFile(showInfo.title)
+        if showInfo.title is None:
+            self.printer.infoPrint("Match not found. Unknown show.")
             sys.exit(-1)
+        page_content_req = self.doRequest(showInfo)
+        if page_content_req.status_code > 300:
+            if not self.checkIfExists(showInfo):
+                self.printer.errorPrint("TV Series not found, " +
+                                        "have you misspelled it?")
+            else:
+                self.printer.errorPrint("TV Series found, but " +
+                                        "episode or season not aired yet")
+            sys.exit(-1)
+        self.printer.infoPrint("Match found, new title: " + showInfo.title)
+        return page_content_req
+
+    def getEpisodeCode(self, showInfo):
+        """Extracts the unique code from the page's HTML"""
+
+        show = showInfo.title
+        season = showInfo.season
+        episode = showInfo.episode
+        search = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
+
+        url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
+            show, season, episode, 0)
+        page_content_req = self.doRequest(showInfo)
+
+        if page_content_req.status_code > 300:
+            page_content_req = self.tryWithAliases(showInfo)
         page_content = page_content_req.text
 
         try:
@@ -139,8 +184,8 @@ class Downloader:
             release_code = self.getSuitableRelease(showInfo)
         else:
             release_code = 0
-        info = status_checker.getStatus(release_code, showInfo, self.page_html)
         code = self.getEpisodeCode(showInfo)
+        info = status_checker.getStatus(release_code, showInfo, self.page_html)
 
         subtitles = []
 
@@ -196,6 +241,8 @@ class Downloader:
         else:
             filename = "{}.{}.srt".format(folderSearch, lang_codes[lang])
 
-        with open(filename, 'wb') as subtitle:
+        if not os.path.exists("downloads"):
+            os.makedirs("downloads")
+        with open("downloads/" + filename, 'wb') as subtitle:
             subtitle.write(text)
         self.printer.infoPrint("Subtitle saved as file: " + filename)

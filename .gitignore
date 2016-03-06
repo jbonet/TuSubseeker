@@ -4,6 +4,7 @@
 *.pyc
 *.txt
 Tests/
+testing/
 Makefile
 
 # Byte-compiled / optimized / DLL files

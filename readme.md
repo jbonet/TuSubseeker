@@ -19,8 +19,21 @@ python tusubseeker.py -t "Show title" -s Season -e Episode [-r "Release"] [-l la
 Notes:
 - Show title **MUST** match the title used in www.tusubtitulo.com
 - Quotation marks are **NOT** optional.
-- Default folder is current working directory.
+- Default folder is "downloads" inside current working directory.
 - Languages must be an ISO 3166 two-letter country code.
+
+Aliases
+=======
+Now supports aliases. If a shows title is too long, or too complex to be written every single time, you can add it as a show inside the main shows in the file
+**alias.xml** keeping this simple xml structure:
+
+
+```bash
+<show>
+  <title>Real title</title>
+  <alias>alias</alias>
+</show>
+```
 
 Dependencies
 ============
