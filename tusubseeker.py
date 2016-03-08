@@ -7,27 +7,35 @@ from libs import ShowInfo
 from libs import Printer
 import argparse
 import downloader
+import json
 import os
 import sys
 
 standalone_episode_regexs = [
     # Newzbin style, no _UNPACK_
-    '(.*?)( \(([0-9]+)\))? - ([0-9]+)+x([0-9]+)(-[0-9]+[Xx]([0-9]+))?( - (.*))?',
+    '(.*?)( \(([0-9]+)\))? - ([0-9]+)+x([0-9]+)' +
+    '(-[0-9]+[Xx]([0-9]+))?( - (.*))?',
     # standard s00e00
-    '(.*?)( \(([0-9]+)\))?[Ss]([0-9]+)+[Ee]([0-9]+)(-[0-9]+[Xx]([0-9]+))?( - (.*))?'
+    '(.*?)( \(([0-9]+)\))?[Ss]([0-9]+)+' +
+    '[Ee]([0-9]+)(-[0-9]+[Xx]([0-9]+))?( - (.*))?'
 ]
 
 episode_regexps = [
     # S03E04-E05
-    '(?P<show>.*?)[sS](?P<season>[0-9]+)[\._ ]*[eE](?P<ep>[0-9]+)[\._ ]*([- ]?[sS](?P<secondSeason>[0-9]+))?([- ]?[Ee+](?P<secondEp>[0-9]+))?',
+    '(?P<show>.*?)[sS](?P<season>[0-9]+)[\._ ]' +
+    '*[eE](?P<ep>[0-9]+)[\._ ]*([- ]?[sS](?P<second' +
+    'Season>[0-9]+))?([- ]?[Ee+](?P<secondEp>[0-9]+))?',
     # S03-03
-    '(?P<show>.*?)[sS](?P<season>[0-9]{2})[\._\- ]+(?P<ep>[0-9]+)',
+    '(?P<show>.*?)[sS](?P<season>[0-9]{2})' +
+    '[\._\- ]+(?P<ep>[0-9]+)',
     # 3x03, 3x03-3x04, 3x03x04
-    '(?P<show>.*?)([^0-9]|^)(?P<season>(19[3-9][0-9]|20[0-5][0-9]|[0-9]{1,2}))[Xx](?P<ep>[0-9]+)((-[0-9]+)?[Xx](?P<secondEp>[0-9]+))?',
+    '(?P<show>.*?)([^0-9]|^)(?P<season>(19[3-9][0-9]|20[0-5][0-9]' +
+    '|[0-9]{1,2}))[Xx](?P<ep>[0-9]+)((-[0-9]+)?[Xx](?P<secondEp>[0-9]+))?',
     # SP01 (Special 01, equivalent to S00E01)
     '(.*?)(^|[\._\- ])+(?P<season>sp)(?P<ep>[0-9]{2})([\._\- ]|$)+',
     # .602.
-    '(.*?)[^0-9a-z](?P<season>[0-9]{1,2})(?P<ep>[0-9]{2})([\.\-][0-9]+(?P<secondEp>[0-9]{2})([ \-_\.]|$)[\.\-]?)?([^0-9a-z%]|$)'
+    '(.*?)[^0-9a-z](?P<season>[0-9]{1,2})(?P<ep>[0-9]{2})' +
+    '([\.\-][0-9]+(?P<secondEp>[0-9]{2})([ \-_\.]|$)[\.\-]?)?([^0-9a-z%]|$)'
 ]
 
 release_equivalence_table = {
@@ -127,7 +135,7 @@ if __name__ == "__main__":
                         'the mkv files', metavar="Folder", default='.')
     parser.add_argument('-l', '--languages', help='Languages in which the ' +
                         'subtitles are going to be downloaded', nargs='+',
-                        metavar="Lang", default=["es"])
+                        metavar="Lang", default=None)
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Enables Debug mode (Verbose)', default=False)
     # MODO output: le pasas un directiorio, y guarda el subtitulo con el nombre
@@ -144,7 +152,8 @@ if __name__ == "__main__":
         isItFolderSearch = False
         argStatus = []
         for arg in vars(args):
-            if getattr(args, arg) is None and arg is not 'release':
+            if getattr(args, arg) is None and arg is not 'release' \
+                    and arg is not 'languages':
                 parser.error("Argument '--{}' is required for normal search"
                              .format(arg))
                 sys.exit(-1)
@@ -152,8 +161,17 @@ if __name__ == "__main__":
         printer.debugPrint("Folder Search mode detected")
         isItFolderSearch = True
 
+    langs_list = None
+    if args.languages is None:
+        with open("languages.json") as langs_file:
+            langs = json.load(langs_file)
+
+        langs_list = langs["languages"]
+    else:
+        langs_list = args.languages
+
     printer.debugPrint(args.languages)
-    downloader = downloader.Downloader(langCode(args.languages), printer)
+    downloader = downloader.Downloader(langCode(langs_list), printer)
 
     if isItFolderSearch:
         folderSearch(args.folder)

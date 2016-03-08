@@ -1,6 +1,6 @@
 #Real aliases file
 aliases.json
-
+languages.json
 # Project Test-Generated Files
 *.srt
 *.mkv
