@@ -1,8 +1,6 @@
 # coding=utf-8
 
-from lxml import html
 from bs4 import BeautifulSoup
-import re
 import requests
 import sys
 
@@ -23,8 +21,9 @@ def getStatus(release, showInfo, html):
                 sys.exit(-1)
             html = pageHtml.text
         soup = BeautifulSoup(html, 'lxml')
-    except:
+    except UnboundLocalError:
         print("Exception thrown")
+        sys.exit(-1)
 
     iterations = 0
     for versiones in soup.find_all('div', id="version"):
