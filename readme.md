@@ -23,7 +23,8 @@ Notes:
 - Show title **MUST** match the title used in www.tusubtitulo.com
 - Quotation marks are **NOT** optional.
 - Default folder is "downloads" inside current working directory.
-- Languages must be an ISO 3166 two-letter country code.
+- Language is one (or more if want to download more than one) of these:
+    "en", "es" or "es-la". Each one corresponding with "English", "Spanish (Spain)" and "Spanish (Latin America)"
 
 Aliases
 =======
