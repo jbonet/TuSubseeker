@@ -29,6 +29,7 @@ Now supports aliases. If a shows title is too long, or too complex to be written
 
 
 ```bash
+{
     "shows":[
         {
             "alias":"yourAlias",
