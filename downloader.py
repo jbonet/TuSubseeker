@@ -84,6 +84,14 @@ def checkIfAvailable(lang, info):
     return status
 
 
+def checkIfExists(showInfo):
+    """Checks if the show exists on the website by requesting the first
+    episode"""
+
+    page_content_req = doRequest(showInfo, checkMode=True)
+    return False if page_content_req.status_code > 300 else True
+
+
 class Downloader:
 
     def __init__(self, languages, printer):
@@ -91,13 +99,6 @@ class Downloader:
         self.printer = printer
         self.page_html = None
         self.alias = None
-
-    def checkIfExists(self, showInfo):
-        """Checks if the show exists on the website by requesting the first
-        episode"""
-
-        page_content_req = doRequest(showInfo, checkMode=True)
-        return False if page_content_req.status_code > 300 else True
 
     def tryWithAliases(self, showInfo):
         """If supplied title not found on the website, does the
@@ -126,9 +127,6 @@ class Downloader:
     def getEpisodeCode(self, showInfo):
         """Extracts the show's unique code from the HTML"""
 
-        show = showInfo.title
-        season = showInfo.season
-        episode = showInfo.episode
         search = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
 
         page_content_req = doRequest(showInfo)
@@ -139,7 +137,7 @@ class Downloader:
 
         try:
             code = re.search(search, page_content).group(1)
-        except:
+        except IndexError:
             self.printer.errorPrint("Subtitle code not found")
             sys.exit(-1)
 

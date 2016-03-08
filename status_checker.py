@@ -35,7 +35,7 @@ def getStatus(release, showInfo, html):
                 try:
                     item = lis.contents[1]
                     item = item.text
-                except:
+                except IndexError:
                     wut = lis.string
                     if u"\n" != wut:
                         item = wut.replace(u"\t", "")
