@@ -1,6 +1,6 @@
 TuSubseeker
 =======
-
+[![Codacy Badge](https://api.codacy.com/project/badge/grade/5df1f966326e465abb2a2fc7f6cf9bb7)](https://www.codacy.com/app/jbl4/TuSubseeker)
 Descarga subtítulos en Español e Inglés para tus series favoritas de www.tusubtitulo.com directamente desde la terminal.
 
 Usage
