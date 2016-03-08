@@ -46,6 +46,8 @@ class Downloader:
         self.alias = None
 
     def getAliasFromFile(self, alias):
+        """Gets show real title from alias if specified"""
+
         with open("aliases.json") as alias_file:
             aliases = json.load(alias_file)
 
@@ -75,14 +77,16 @@ class Downloader:
         return requests.get(url, headers=headers)
 
     def checkIfExists(self, showInfo):
+        """Checks if the show exists on the website by requesting the first
+        episode"""
+
         page_content_req = self.doRequest(showInfo, checkMode=True)
-        if page_content_req.status_code > 300:
-            exists = False
-        else:
-            exists = True
-        return exists
+        return False if page_content_req.status_code > 300 else True
 
     def tryWithAliases(self, showInfo):
+        """If supplied title not found on the website, does the
+        request again, but using the alias"""
+
         self.printer.infoPrint("Title not found, checking " +
                                "aliases for a match")
         showInfo.title = self.getAliasFromFile(showInfo.title)
@@ -104,15 +108,15 @@ class Downloader:
         return page_content_req
 
     def getEpisodeCode(self, showInfo):
-        """Extracts the unique code from the page's HTML"""
+        """Extracts the show's unique code from the HTML"""
 
         show = showInfo.title
         season = showInfo.season
         episode = showInfo.episode
         search = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
-
         url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
             show, season, episode, 0)
+
         page_content_req = self.doRequest(showInfo)
 
         if page_content_req.status_code > 300:
@@ -149,7 +153,8 @@ class Downloader:
         except:
             self.printer.errorPrint("Exception thrown on getSuitableRelease()")
         iterations = 0
-        for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
+        for version in tree.xpath('// div[@id="version"]' +
+                                  '/div / blockquote / p / text()'):
             ve = version.lstrip().encode("utf-8")
             if ve:
                 fetchedRls = ve.split(' ')[1]
@@ -166,13 +171,16 @@ class Downloader:
         return 0
 
     def checkIfAvailable(self, lang, info):
+        """Checks for the status of the translation, returns"""
+
         status = []
         for translation in info:
             if not isinstance(translation, int):
                 if translation[0] == lang_to_unicode[lang]:
                     if u"%" in translation[1]:
                         status.append(False)
-                        status.append(translation[1][:translation[1].index(u"%")])
+                        status.append(translation[1][:translation[1]
+                                                     .index(u"%")])
         if not status:
             status.append(True)
         return status
@@ -200,7 +208,8 @@ class Downloader:
         subtitles = []
 
         for lang in self.languages:
-            self.printer.debugPrint("Looking for language: " + lang_codes[lang])
+            self.printer.debugPrint("Looking for language: " +
+                                    lang_codes[lang])
 
             status = self.checkIfAvailable(lang, info)
             if not status[0]:
@@ -214,7 +223,8 @@ class Downloader:
                     lang, code, str(release_code))
 
                 self.printer.debugPrint("URL: " + url)
-                self.printer.infoPrint("Subtitle for language: {} found! Downloading..."
+                self.printer.infoPrint("Subtitle for language: {} " +
+                                       "found! Downloading..."
                                        .format(lang_codes[lang]))
 
                 r = requests.get(url, headers={'referer':
@@ -226,14 +236,13 @@ class Downloader:
                                             "Bad url?".format(r.status_code))
                 else:
                     subtitles.append((showInfo, lang, r.content, folderSearch))
-                    # self.writeToSrt(showInfo, lang, r.content, folderSearch)
             except Exception as e:
                 self.printer.errorPrint("Error fatal: " + str(e))
 
         return subtitles
 
     def writeToSrt(self, subtitle):
-        """Writes the text to a SRT file"""
+        """Writes the text to an SRT file"""
         showInfo = subtitle[0]
         lang = subtitle[1]
         text = subtitle[2]

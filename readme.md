@@ -5,6 +5,9 @@ Descarga subtítulos en Español e Inglés para tus series favoritas de www.tusu
 
 Usage
 =====
+Rename aliases.json.sample to aliases.json and define your aliases. Alias specification on next section.
+
+
 Folder search:
 ```bash
 python tusubseeker.py [-f folder] [-l langs...]

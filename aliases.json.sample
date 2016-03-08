@@ -1,0 +1,12 @@
+{
+    "shows":[
+        {
+            "alias":"show1",
+            "title":"Show1 Long Real Title"
+        },
+        {
+            "alias":"show2",
+            "title":"Show2.Tricky.Tit-le"
+        }
+    ]
+}
