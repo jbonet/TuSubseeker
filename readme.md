@@ -24,15 +24,20 @@ Notes:
 
 Aliases
 =======
-Now supports aliases. If a shows title is too long, or too complex to be written every single time, you can add it as a show inside the main shows in the file
-**alias.xml** keeping this simple xml structure:
+Now supports aliases. If a shows title is too long, or too complex to be written every single time, you can add it as a show in
+**aliases.json** keeping as a JSON Object inside the shows array.
 
 
 ```bash
-<show>
-  <title>Real title</title>
-  <alias>alias</alias>
-</show>
+    "shows":[
+        {
+            "alias":"yourAlias",
+            "title":"TheShowWithTheLongAndAnnoying.Ti.Tle"
+        },
+        .
+        .
+    ]
+}
 ```
 
 Dependencies

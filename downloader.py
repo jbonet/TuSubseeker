@@ -3,7 +3,7 @@
 from libs import Printer
 from libs import ShowInfo
 from lxml import html
-from lxml import etree
+import json
 import os
 import re
 import requests
@@ -43,13 +43,15 @@ class Downloader:
         self.languages = languages
         self.printer = printer
         self.page_html = None
+        self.alias = None
 
     def getAliasFromFile(self, alias):
-        tree = etree.parse("alias.xml")
-        for shows in tree.iter("shows"):
-            for show in shows.iter("show"):
-                if show.find("alias").text == alias:
-                    return show.find("title").text
+        with open("aliases.json") as alias_file:
+            aliases = json.load(alias_file)
+
+        for show in aliases["shows"]:
+            if alias == show["alias"]:
+                return show["title"]
         return None
 
     def doRequest(self, showInfo, checkMode=False):
@@ -87,6 +89,8 @@ class Downloader:
         if showInfo.title is None:
             self.printer.infoPrint("Match not found. Unknown show.")
             sys.exit(-1)
+        else:
+            self.alias = showInfo.title
         page_content_req = self.doRequest(showInfo)
         if page_content_req.status_code > 300:
             if not self.checkIfExists(showInfo):
@@ -180,11 +184,17 @@ class Downloader:
         season = showInfo.season
         episode = showInfo.episode
         release = showInfo.release
+        code = self.getEpisodeCode(showInfo)
+
+        if self.alias is not None:
+            show = self.alias
+            showInfo.show = show
+
         if release is not None:
             release_code = self.getSuitableRelease(showInfo)
         else:
             release_code = 0
-        code = self.getEpisodeCode(showInfo)
+
         info = status_checker.getStatus(release_code, showInfo, self.page_html)
 
         subtitles = []
