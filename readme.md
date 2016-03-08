@@ -1,10 +1,13 @@
 TuSubseeker
 =======
-
+[![Codacy Badge](https://api.codacy.com/project/badge/grade/5df1f966326e465abb2a2fc7f6cf9bb7)](https://www.codacy.com/app/jbl4/TuSubseeker)
 Descarga subtítulos en Español e Inglés para tus series favoritas de www.tusubtitulo.com directamente desde la terminal.
 
 Usage
 =====
+Rename aliases.json.sample to aliases.json and define your aliases. Alias specification on next section.
+
+
 Folder search:
 ```bash
 python tusubseeker.py [-f folder] [-l langs...]
@@ -20,19 +23,26 @@ Notes:
 - Show title **MUST** match the title used in www.tusubtitulo.com
 - Quotation marks are **NOT** optional.
 - Default folder is "downloads" inside current working directory.
-- Languages must be an ISO 3166 two-letter country code.
+- Language is one (or more if want to download more than one) of these:
+    "en", "es" or "es-la". Each one corresponding with "English", "Spanish (Spain)" and "Spanish (Latin America)"
 
 Aliases
 =======
-Now supports aliases. If a shows title is too long, or too complex to be written every single time, you can add it as a show inside the main shows in the file
-**alias.xml** keeping this simple xml structure:
+Now supports aliases. If a shows title is too long, or too complex to be written every single time, you can add it as a show in
+**aliases.json** keeping as a JSON Object inside the shows array.
 
 
 ```bash
-<show>
-  <title>Real title</title>
-  <alias>alias</alias>
-</show>
+{
+    "shows":[
+        {
+            "alias":"yourAlias",
+            "title":"TheShowWithTheLongAndAnnoying.Ti.Tle"
+        },
+        .
+        .
+    ]
+}
 ```
 
 Dependencies

@@ -1,9 +1,7 @@
 # coding=utf-8
 
-from libs import Printer
-from libs import ShowInfo
 from lxml import html
-from lxml import etree
+import json
 import os
 import re
 import requests
@@ -37,59 +35,86 @@ lang_to_unicode = {
 }
 
 
+def getAliasFromFile(alias):
+    """Gets show real title from alias if specified"""
+
+    with open("aliases.json") as alias_file:
+        aliases = json.load(alias_file)
+
+    for show in aliases["shows"]:
+        if alias == show["alias"]:
+            return show["title"]
+    return None
+
+
+def doRequest(showInfo, checkMode=False):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.1' +
+        '1  (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.' +
+        '9,image/webp,*/*;q=0.8',
+        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+        'Accept-Encoding': 'none',
+        'Accept-Language': 'es-ES,es;q=0.8',
+        'Connection': 'keep-alive',
+        'Host': 'www.tusubtitulo.com'
+    }
+
+    season = showInfo.season if not checkMode else str(1)
+    episode = showInfo.episode if not checkMode else str(1)
+
+    url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
+        showInfo.title, season, episode, 0)
+    return requests.get(url, headers=headers)
+
+
+def checkIfAvailable(lang, info):
+    """Checks for the status of the translation, returns"""
+
+    status = []
+    for translation in info:
+        if not isinstance(translation, int):
+            if translation[0] == lang_to_unicode[lang]:
+                if u"%" in translation[1]:
+                    status.append(False)
+                    status.append(translation[1][:translation[1]
+                                                 .index(u"%")])
+    if not status:
+        status.append(True)
+    return status
+
+
+def checkIfExists(showInfo):
+    """Checks if the show exists on the website by requesting the first
+    episode"""
+
+    page_content_req = doRequest(showInfo, checkMode=True)
+    return False if page_content_req.status_code > 300 else True
+
+
 class Downloader:
 
     def __init__(self, languages, printer):
         self.languages = languages
         self.printer = printer
         self.page_html = None
-
-    def getAliasFromFile(self, alias):
-        tree = etree.parse("alias.xml")
-        for shows in tree.iter("shows"):
-            for show in shows.iter("show"):
-                if show.find("alias").text == alias:
-                    return show.find("title").text
-        return None
-
-    def doRequest(self, showInfo, checkMode=False):
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.1' +
-            '1  (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.' +
-            '9,image/webp,*/*;q=0.8',
-            'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-            'Accept-Encoding': 'none',
-            'Accept-Language': 'es-ES,es;q=0.8',
-            'Connection': 'keep-alive',
-            'Host': 'www.tusubtitulo.com'
-        }
-
-        season = showInfo.season if not checkMode else str(1)
-        episode = showInfo.episode if not checkMode else str(1)
-
-        url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
-            showInfo.title, season, episode, 0)
-        return requests.get(url, headers=headers)
-
-    def checkIfExists(self, showInfo):
-        page_content_req = self.doRequest(showInfo, checkMode=True)
-        if page_content_req.status_code > 300:
-            exists = False
-        else:
-            exists = True
-        return exists
+        self.alias = None
 
     def tryWithAliases(self, showInfo):
+        """If supplied title not found on the website, does the
+        request again, but using the alias"""
+
         self.printer.infoPrint("Title not found, checking " +
                                "aliases for a match")
-        showInfo.title = self.getAliasFromFile(showInfo.title)
+        showInfo.title = getAliasFromFile(showInfo.title)
         if showInfo.title is None:
             self.printer.infoPrint("Match not found. Unknown show.")
             sys.exit(-1)
-        page_content_req = self.doRequest(showInfo)
+        else:
+            self.alias = showInfo.title
+        page_content_req = doRequest(showInfo)
         if page_content_req.status_code > 300:
-            if not self.checkIfExists(showInfo):
+            if not checkIfExists(showInfo):
                 self.printer.errorPrint("TV Series not found, " +
                                         "have you misspelled it?")
             else:
@@ -100,16 +125,11 @@ class Downloader:
         return page_content_req
 
     def getEpisodeCode(self, showInfo):
-        """Extracts the unique code from the page's HTML"""
+        """Extracts the show's unique code from the HTML"""
 
-        show = showInfo.title
-        season = showInfo.season
-        episode = showInfo.episode
         search = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
 
-        url = 'http://www.tusubtitulo.com/serie/%s/%s/%s/%s' % (
-            show, season, episode, 0)
-        page_content_req = self.doRequest(showInfo)
+        page_content_req = doRequest(showInfo)
 
         if page_content_req.status_code > 300:
             page_content_req = self.tryWithAliases(showInfo)
@@ -117,7 +137,7 @@ class Downloader:
 
         try:
             code = re.search(search, page_content).group(1)
-        except:
+        except IndexError:
             self.printer.errorPrint("Subtitle code not found")
             sys.exit(-1)
 
@@ -142,10 +162,13 @@ class Downloader:
                 sys.exit(-1)
             self.page_html = pageHtml.text
             tree = html.fromstring(pageHtml.text)
-        except:
+        except UnboundLocalError:
             self.printer.errorPrint("Exception thrown on getSuitableRelease()")
+            sys.exit(-1)
+
         iterations = 0
-        for version in tree.xpath('//div[@id="version"]/div/blockquote/p/text()'):
+        for version in tree.xpath('// div[@id="version"]' +
+                                  '/div / blockquote / p / text()'):
             ve = version.lstrip().encode("utf-8")
             if ve:
                 fetchedRls = ve.split(' ')[1]
@@ -161,38 +184,28 @@ class Downloader:
                                "default will be downloaded.")
         return 0
 
-    def checkIfAvailable(self, lang, info):
-        status = []
-        for translation in info:
-            if not isinstance(translation, int):
-                if translation[0] == lang_to_unicode[lang]:
-                    if u"%" in translation[1]:
-                        status.append(False)
-                        status.append(translation[1][:translation[1].index(u"%")])
-        if not status:
-            status.append(True)
-        return status
-
     def download(self, showInfo, folderSearch=False):
         """Downloads the specified subtitle"""
 
-        show = showInfo.title
-        season = showInfo.season
-        episode = showInfo.episode
-        release = showInfo.release
-        if release is not None:
+        code = self.getEpisodeCode(showInfo)
+
+        if self.alias is not None:
+            showInfo.show = self.alias
+
+        if showInfo.release is not None:
             release_code = self.getSuitableRelease(showInfo)
         else:
             release_code = 0
-        code = self.getEpisodeCode(showInfo)
+
         info = status_checker.getStatus(release_code, showInfo, self.page_html)
 
         subtitles = []
 
         for lang in self.languages:
-            self.printer.debugPrint("Looking for language: " + lang_codes[lang])
+            self.printer.debugPrint("Looking for language: " +
+                                    lang_codes[lang])
 
-            status = self.checkIfAvailable(lang, info)
+            status = checkIfAvailable(lang, info)
             if not status[0]:
                 not_completed_yet = "Subtitle is not ready yet. " + \
                     str(status[1]) + "% translated."
@@ -204,26 +217,27 @@ class Downloader:
                     lang, code, str(release_code))
 
                 self.printer.debugPrint("URL: " + url)
-                self.printer.infoPrint("Subtitle for language: {} found! Downloading..."
-                                       .format(lang_codes[lang]))
+                self.printer.infoPrint(
+                    "Subtitle for language: {} found! Downloading..."
+                    .format(lang_codes[lang]))
 
                 r = requests.get(url, headers={'referer':
                                                'http://www.tusubtitulo.com'})
                 self.printer.debugPrint("Request code: {}"
                                         .format(str(r.status_code)))
                 if r.status_code > 300:
-                    self.printer.errorPrint("Request returned code: {}. " +
-                                            "Bad url?".format(r.status_code))
+                    self.printer.errorPrint(
+                        "Request returned code: {}. Bad url?"
+                        .format(r.status_code))
                 else:
                     subtitles.append((showInfo, lang, r.content, folderSearch))
-                    # self.writeToSrt(showInfo, lang, r.content, folderSearch)
             except Exception as e:
                 self.printer.errorPrint("Error fatal: " + str(e))
 
         return subtitles
 
     def writeToSrt(self, subtitle):
-        """Writes the text to a SRT file"""
+        """Writes the text to an SRT file"""
         showInfo = subtitle[0]
         lang = subtitle[1]
         text = subtitle[2]
@@ -235,7 +249,7 @@ class Downloader:
             else "Default"
 
         if not folderSearch:
-            release = "" if release in "Default" else "-" + release
+            release = "" if release == "Default" else "-" + release
             filename = "{} - {}x{}{}.{}.srt".format(
                 show, str(season), str(episode), release, lang_codes[lang])
         else:
