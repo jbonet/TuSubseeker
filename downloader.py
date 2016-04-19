@@ -1,6 +1,7 @@
 # coding=utf-8
 
 from lxml import html
+import filecmp
 import json
 import os
 import re
@@ -8,6 +9,7 @@ import requests
 import status_checker
 import sys
 
+HTML_DECLARATION = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN'
 release_equivalence_table = {
     'LOL': 'DIMENSION',
     'SYS': 'DIMENSION',
@@ -184,7 +186,7 @@ class Downloader:
                                "default will be downloaded.")
         return 0
 
-    def download(self, showInfo, folderSearch=False):
+    def download(self, showInfo):
         """Downloads the specified subtitle"""
 
         code = self.getEpisodeCode(showInfo)
@@ -217,9 +219,6 @@ class Downloader:
                     lang, code, str(release_code))
 
                 self.printer.debugPrint("URL: " + url)
-                self.printer.infoPrint(
-                    "Subtitle for language: {} found! Downloading..."
-                    .format(lang_codes[lang]))
 
                 r = requests.get(url, headers={'referer':
                                                'http://www.tusubtitulo.com'})
@@ -230,33 +229,52 @@ class Downloader:
                         "Request returned code: {}. Bad url?"
                         .format(r.status_code))
                 else:
-                    subtitles.append((showInfo, lang, r.content, folderSearch))
+                    if HTML_DECLARATION in r.content:
+                        self.printer.infoPrint("Subtitle not found.")
+                        sys.exit(-1)
+                    self.printer.infoPrint(
+                        "Subtitle for language: {} found! Downloading..."
+                        .format(lang_codes[lang]))
+                    subtitles.append((showInfo, lang, r.content))
             except Exception as e:
                 self.printer.errorPrint("Error fatal: " + str(e))
 
         return subtitles
 
-    def writeToSrt(self, subtitle):
+    def writeToSrt(self, subtitle, folderSearch=False, mkvfile=None):
         """Writes the text to an SRT file"""
         showInfo = subtitle[0]
         lang = subtitle[1]
         text = subtitle[2]
-        folderSearch = subtitle[3]
         show = showInfo.title
         season = showInfo.season
         episode = showInfo.episode
         release = showInfo.release if showInfo.release is not None \
             else "Default"
 
-        if not folderSearch:
+        if mkvfile is None:
             release = "" if release == "Default" else "-" + release
             filename = "{} - {}x{}{}.{}.srt".format(
                 show, str(season), str(episode), release, lang_codes[lang])
         else:
-            filename = "{}.{}.srt".format(folderSearch, lang_codes[lang])
+            filename = "{}.{}.srt".format(mkvfile, lang_codes[lang])
 
-        if not os.path.exists("downloads"):
-            os.makedirs("downloads")
-        with open("downloads/" + filename, 'wb') as subtitle:
-            subtitle.write(text)
+        if mkvfile is None:
+            if not folderSearch:
+                folder = "downloads/"
+            else:
+                folder = folderSearch
+                if not folderSearch.endswith("/"):
+                    folder = folderSearch + "/"
+            if not os.path.exists("downloads"):
+                os.makedirs("downloads")
+            with open(folder + filename, 'wb') as subtitle:
+                subtitle.write(text)
+        else:
+            folder = folderSearch
+            if not folderSearch.endswith("/"):
+                folder = folderSearch + "/"
+            with open(folder + filename, 'wb') as subtitle:
+                subtitle.write(text)
+
         self.printer.infoPrint("Subtitle saved as file: " + filename)

@@ -9,6 +9,7 @@ import argparse
 import downloader
 import json
 import os
+import re
 import sys
 
 standalone_episode_regexs = [
@@ -58,6 +59,8 @@ lang_codes_rev = {
     'es-la': '6'
 }
 
+folder = ""
+
 
 def folderSearch(folder):
     printer.warningPrint("Feature not finished. May be (it sure is) buggy.")
@@ -87,7 +90,6 @@ def folderSearch(folder):
     if len(fileset) == 0:
         printer.infoPrint("No files left to process or the " +
                           "folder does not contain any mkv")
-
     for mkvfile in fileset:
         if mkvfile not in already_downloaded:
             for rx in episode_regexps[0:-1]:
@@ -108,7 +110,9 @@ def folderSearch(folder):
                         name = "%s %s" % (name, year)
                     showInfo = ShowInfo.ShowInfo(name, int(season),
                                                  episode, release)
-                    downloadSubtitle(showInfo, mkvfile)
+                    subtitles = downloader.download(showInfo)
+                    for sub in subtitles:
+                        downloader.writeToSrt(sub, folder, mkvfile)
 
 
 def langCode(langs):
@@ -141,7 +145,7 @@ if __name__ == "__main__":
     # MODO output: le pasas un directiorio, y guarda el subtitulo con el nombre
     # del mkv que se encuentre en el directorio
     parser.add_argument('-o', '--output', help='Folder where will be saved ' +
-                        'the srt files', metavar="Output", default='.')
+                        'the srt files', metavar="Output", default=False)
     args = parser.parse_args()
 
     printer = Printer.Printer(args.debug)
@@ -158,6 +162,7 @@ if __name__ == "__main__":
                              .format(arg))
                 sys.exit(-1)
     else:
+        folder = args.folder
         printer.debugPrint("Folder Search mode detected")
         isItFolderSearch = True
 
@@ -182,5 +187,9 @@ if __name__ == "__main__":
         showInfo = ShowInfo.ShowInfo(args.title, args.season,
                                      episode, args.release)
         subtitles = downloader.download(showInfo)
-        for sub in subtitles:
-            downloader.writeToSrt(sub)
+        if not args.output:
+            for sub in subtitles:
+                downloader.writeToSrt(sub)
+        else:
+            for sub in subtitles:
+                downloader.writeToSrt(sub, args.output)
