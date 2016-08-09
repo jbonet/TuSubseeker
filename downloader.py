@@ -127,7 +127,7 @@ class Downloader:
     def getEpisodeCode(self, showInfo):
         """Extracts the show's unique code from the HTML"""
 
-        search = "http://www.tusubtitulo.com/original/(?P<code>[0-9]+)/0"
+        search = "original/(?P<code>[0-9]+)/0"
 
         page_content_req = doRequest(showInfo)
 

@@ -3,6 +3,7 @@
 from bs4 import BeautifulSoup
 import requests
 import sys
+import re
 
 version = []
 
@@ -26,7 +27,7 @@ def getStatus(release, showInfo, html):
         sys.exit(-1)
 
     iterations = 0
-    for versiones in soup.find_all('div', id="version"):
+    for versiones in soup.find_all('div', id=re.compile("version[0-9]+")):
         version.append(iterations)
         for listas in versiones.find_all('ul', class_="sslist"):
             wowo = []
