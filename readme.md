@@ -49,6 +49,8 @@ If a shows title is too long, or too complex to be written every single time, yo
 
 Dependencies
 ============
+Can be installed with pip: pip install -r requirements
+
 - [BeautifulSoup](http://www.crummy.com/software/BeautifulSoup/) (pip install beautifulsoup4)
 - [Lxml](http://www.lxml.de) (pip install lxml)
 - [Requests](http://docs.python-requests.org/en/master) (pip install requests)
