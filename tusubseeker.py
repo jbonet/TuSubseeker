@@ -9,6 +9,7 @@ import argparse
 import downloader
 import json
 import os
+import re
 import sys
 
 standalone_episode_regexs = [
@@ -45,6 +46,8 @@ release_equivalence_table = {
     'PROPER': 'LOL,DIMENSION',
     'DIMENSION': 'LOL'
 }
+
+default_lang = ["en"]
 
 lang_codes = {
     '1': 'en',
@@ -163,10 +166,13 @@ if __name__ == "__main__":
 
     langs_list = None
     if args.languages is None:
-        with open("languages.json") as langs_file:
-            langs = json.load(langs_file)
+        try:
+            with open("languages.json") as langs_file:
+                langs = json.load(langs_file)
+                langs_list = langs["languages"]
+        except Exception as ex:
+            langs_list = default_lang
 
-        langs_list = langs["languages"]
     else:
         langs_list = args.languages
 
